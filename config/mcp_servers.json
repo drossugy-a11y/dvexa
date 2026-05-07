@@ -1,0 +1,23 @@
+{
+  "filesystem": {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/claude/DVexa"],
+    "env": {},
+    "description": "结构化文件读写",
+    "enabled": false
+  },
+  "semgrep": {
+    "command": "uvx",
+    "args": ["semgrep-mcp"],
+    "env": {},
+    "description": "静态代码分析",
+    "enabled": false
+  },
+  "sequential-thinking": {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+    "env": {},
+    "description": "链式推理",
+    "enabled": false
+  }
+}
