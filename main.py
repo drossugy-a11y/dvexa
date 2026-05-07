@@ -31,6 +31,20 @@ from capabilities.skills.http_skill import HTTPSkill
 from governance.skill_governor import SkillGovernor
 
 
+# ─── Insight Layer (v1.86) ────────────────────────────────────────────────
+from insight.agent import InsightAgent
+
+# ─── External Capability Layer (v1.88) ───────────────────────────────────
+from external.registry import ExternalRegistry
+from external.sandbox import ExternalSandbox
+from external.assimilator import CapabilityAssimilator
+from external.report import ExternalReporter, AssimilationReport
+
+# ─── Execution Report Layer (v1.88) ──────────────────────────────────────
+from report.execution_report import ExecutionReportBuilder
+from report.formatter import ReportFormatter
+
+
 def main():
     # ─── 基础工具（被 Capability Layer 封装为 stateless skill） ───────────
     llm_tool = LLMTool(api_key=LLM_API_KEY, base_url=LLM_BASE_URL, model=LLM_MODEL)
@@ -66,6 +80,29 @@ def main():
 
     kernel = DVexaKernel(scheduler, executor, memory)
     set_kernel(kernel)
+
+    # ─── Execution Report Layer (v1.88) ──────────────────────────────────
+    # 报告构建器 + 格式化器
+    report_builder = ExecutionReportBuilder()
+    report_formatter = ReportFormatter()
+    insight_agent = InsightAgent(governor=governor, memory=memory)
+
+    # ─── 外部能力接入层 (v1.88) ───────────────────────────────────────
+    external_registry = ExternalRegistry()
+    external_reporter = ExternalReporter()
+
+    # 注入 API 观察链路
+    from api.server import set_observer
+    set_observer(lambda kernel_result: (
+        report_formatter.to_text(
+            report_builder.from_kernel_result(
+                result=kernel_result,
+                governor=governor,
+                insight_report=insight_agent.generate_report(),
+                external_reporter=external_reporter,
+            )
+        )
+    ))
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
 

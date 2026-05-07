@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-app = FastAPI(title="DVexa v1.5")
+app = FastAPI(title="DVexa v1.8")
 kernel = None
+_observer = None
 
 
 class TaskRequest(BaseModel):
@@ -12,6 +13,11 @@ class TaskRequest(BaseModel):
 def set_kernel(k):
     global kernel
     kernel = k
+
+
+def set_observer(fn):
+    global _observer
+    _observer = fn
 
 
 def _response(success: bool, data=None, error: str | None = None, metadata: dict | None = None):
@@ -30,6 +36,12 @@ async def submit_task(req: TaskRequest):
         return _response(False, error="Kernel 未初始化")
     try:
         result = kernel.run_task(req.task)
+        # Execution Report (v1.88) — 观察链
+        if _observer:
+            try:
+                _observer(result)
+            except Exception:
+                pass  # 观察失败不影响主流程
         return _response(True, data=result)
     except Exception as e:
         return _response(False, error=str(e))
