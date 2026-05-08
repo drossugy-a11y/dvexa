@@ -33,6 +33,11 @@ from tools.security_scanner_tool import SecurityScannerTool
 
 # ─── Governance Layer (v1.8) ────────────────────────────────────────────────
 from governance.skill_governor import SkillGovernor
+# ─── Governance Decision Injection Layer (v1) ──────────────────────────────
+from governance.governance_kernel import GovernanceKernel
+from governance.decision_layer import GovernanceExecutorWrapper
+from governance.assimilation_test_system import AssimilationTestSystem
+from governance.feedback_engine import GovernanceFeedbackEngine
 
 
 # ─── Insight Layer (v1.86) ────────────────────────────────────────────────
@@ -58,6 +63,8 @@ def main():
     # ─── Governance Layer (v1.8) ─────────────────────────────────────────
     # 自动追踪 skill 评分、生命周期、升降级
     governor = SkillGovernor()
+    ats = AssimilationTestSystem()
+    decision_layer = GovernanceKernel(skill_governor=governor, ats=ats)
 
     # ─── Capability Layer（唯一增长区） ──────────────────────────────────
     # 新增能力只需在这里注册 keyword + handler
@@ -86,10 +93,19 @@ def main():
     # ─── 冻结层（零改动） ────────────────────────────────────────────────
     agent = BaseAgent(llm_tool)
     executor = Executor(agent, tool_registry)
+    governed_executor = GovernanceExecutorWrapper(executor, decision_layer)
     scheduler = Scheduler()
     memory = MemoryStore()
 
-    kernel = DVexaKernel(scheduler, executor, memory)
+    # ─── Governance Feedback Engine (v1) ─────────────────────────────────
+    strategy_stats: dict = {}
+    feedback_engine = GovernanceFeedbackEngine(
+        skill_governor=governor,
+        strategy_stats=strategy_stats,
+    )
+
+    kernel = DVexaKernel(scheduler, governed_executor, memory,
+                         feedback_engine=feedback_engine)
     set_kernel(kernel)
 
     # ─── Execution Report Layer (v1.88) ──────────────────────────────────

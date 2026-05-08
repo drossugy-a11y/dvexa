@@ -6,10 +6,12 @@ from memory.memory_store import MemoryStore
 
 
 class DVexaKernel:
-    def __init__(self, scheduler: Scheduler, executor: Executor, memory: MemoryStore):
+    def __init__(self, scheduler: Scheduler, executor: Executor,
+                 memory: MemoryStore, feedback_engine=None):
         self.scheduler = scheduler
         self.executor = executor
         self.memory = memory
+        self._feedback_engine = feedback_engine
 
     def run_task(self, task_input: str):
         task = self.scheduler.create_task(task_input)
@@ -64,6 +66,18 @@ class DVexaKernel:
             task.mark_completed(final_result)
 
         self.memory.save(task)
+
+        # === FEEDBACK 阶段（后执行学习） ===
+        if self._feedback_engine:
+            trace = self._build_feedback_trace(task, task_input)
+            outcome = {
+                "status": "success" if task.status == TaskStatus.COMPLETED
+                          else "fail",
+                "error_type": task.error or "",
+                "total_latency": 0.0,
+            }
+            self._feedback_engine.record_execution(trace, outcome)
+
         return {
             "task_id": task.id,
             "status": task.status.value,
@@ -72,4 +86,25 @@ class DVexaKernel:
             "steps": task.steps,
             "result": task.result,
             "retry_count": task.retry_count,
+        }
+
+    def _build_feedback_trace(self, task, task_input: str) -> dict:
+        """从任务状态构建反馈执行轨迹。"""
+        steps_trace = []
+        exec_steps = {s["step_id"]: s for s in (task.steps or [])
+                      if isinstance(s, dict) and "step_id" in s}
+        for i, step in enumerate(task.plan or []):
+            sid = step.get("id", i)
+            record = exec_steps.get(sid, {})
+            steps_trace.append({
+                "step_id": sid,
+                "tool": step.get("tool", record.get("tool", "")),
+                "action": step.get("action", ""),
+                "success": task.status == TaskStatus.COMPLETED,
+                "latency": 0.0,
+            })
+        return {
+            "task": task_input,
+            "strategy_used": "",
+            "steps": steps_trace,
         }
