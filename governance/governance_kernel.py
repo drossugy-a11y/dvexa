@@ -106,14 +106,23 @@ class GovernanceKernel:
         kernel = GovernanceKernel(governor, ats)
         result = kernel.process(task_context, raw_plan)
         # → {"filtered_plan": ..., "strategy": "...", "decisions": [...]}
+
+    v1.9: Capability Awareness — 只观察+限制，不修改 capability。
     """
 
     def __init__(self, skill_governor=None, ats=None, tool_policy=None,
-                 stabilizer=None):
+                 stabilizer=None, complexity_budget=None, cost_model=None,
+                 global_optimizer=None, stability_layer=None,
+                 capability_registry=None):
         self._governor = skill_governor
         self._ats = ats
         self._tool_policy = tool_policy
         self._stabilizer = stabilizer
+        self._complexity_budget = complexity_budget
+        self._cost_model = cost_model
+        self._global_optimizer = global_optimizer
+        self._stability_layer = stability_layer
+        self._capability_registry = capability_registry
 
     # ═══════════════════════════════════════════════════════════════════
     # Public API
@@ -134,8 +143,41 @@ class GovernanceKernel:
         Returns:
             {"filtered_plan": {...}, "strategy": "...", "decisions": [...]}
         """
+        # Step 0: Complexity Budget (pre-control)
+        if self._complexity_budget:
+            budget = self._complexity_budget.assign_budget(task)
+            plan = self._complexity_budget.check_plan(plan, budget)
+            plan = self._complexity_budget.enforce(plan, budget)
+
+
+        # Step 0.5: Cost Model (economic constraint)
+        if self._cost_model:
+            cost_info = self._cost_model.estimate_plan_cost(plan)
+            if cost_info["over_budget"]:
+                plan = self._cost_model.enforce_cost_limit(plan)
+            plan["_cost_info"] = cost_info
+
+        # Step 0.6: Capability Awareness (v1.9)
+        # 只观察+限制，不修改 capability 本身
+        capability_decisions: list[dict] = []
+        if self._capability_registry:
+            capability_decisions = self._check_capability_awareness(plan)
+
         # Step 1: Strategy Selection
         strategy = self._select_strategy(task, plan)
+
+        # Capability awareness: quarantined capabilities force STRICT
+        quarantined_found = any(
+            d["action"] == "block" for d in capability_decisions
+        )
+        if quarantined_found and strategy != "STRICT":
+            strategy = "STRICT"
+            capability_decisions.append({
+                "step_id": 0, "action": "info",
+                "checkpoint": "capability_awareness",
+                "reason": "Quarantined capability detected — strategy forced to STRICT",
+            })
+
         config = self._resolve_config(strategy)
 
         if not plan or "steps" not in plan:
@@ -199,6 +241,20 @@ class GovernanceKernel:
                 filtered.append(step)
                 continue
 
+            # ── Checkpoint 4.5: Capability Awareness ──────────────────
+            # 查询 capability taxonomy 中该 skill 的 maturity/risk
+            d = self._check_capability_for_step(skill_name, step_id)
+            if d:
+                step_decisions.append(d)
+                if d["action"] == "block":
+                    decisions.extend(step_decisions)
+                    continue
+                if d["action"] == "downgrade":
+                    step = self._downgrade_step(step)
+                    decisions.extend(step_decisions)
+                    filtered.append(step)
+                    continue
+
             # ── Checkpoint 5: Strategy Override ──────────────────────
             if config.get("prefer_reasoning") and tool_name \
                and step.get("type") != "reasoning":
@@ -237,6 +293,7 @@ class GovernanceKernel:
             "filtered_plan": filtered_plan,
             "strategy": strategy,
             "decisions": decisions,
+            "capability_decisions": capability_decisions,
         }
 
     def inject(self, plan: dict, task_context: dict | None = None) -> dict:
@@ -334,6 +391,55 @@ class GovernanceKernel:
             if score and score.usage == 0:
                 return True
         return False
+
+    # ═══════════════════════════════════════════════════════════════════
+    # Capability Awareness (v1.9)
+    # ═══════════════════════════════════════════════════════════════════
+
+    def _check_capability_awareness(self, plan: dict) -> list[dict]:
+        """检查计划中涉及的 capability 状态。
+
+        红线: 只观察+限制，不修改 capability。
+        - quarantined → 自动阻断对应的 tool
+        - experimental → 记录警告（后续策略提升强度）
+        - high_risk → 记录警告
+        """
+        decisions: list[dict] = []
+        if not self._capability_registry:
+            return decisions
+
+        for step in plan.get("steps", []):
+            tool_name = step.get("tool", "")
+            skill_name = _to_skill_name(tool_name) if tool_name else ""
+            if not skill_name:
+                continue
+
+            # 查找对应的 capability nodes
+            matches = self._capability_registry.search(keyword=skill_name)
+            for node in matches:
+                if node.maturity == "quarantined":
+                    decisions.append({
+                        "step_id": step.get("id", 0),
+                        "action": "block",
+                        "checkpoint": "capability_awareness",
+                        "reason": f"Capability '{node.name}' is QUARANTINED — blocked by taxonomy",
+                    })
+                elif node.maturity == "experimental":
+                    decisions.append({
+                        "step_id": step.get("id", 0),
+                        "action": "warn",
+                        "checkpoint": "capability_awareness",
+                        "reason": f"Capability '{node.name}' is EXPERIMENTAL — increased governance strength",
+                    })
+                elif node.risk_level in ("high", "critical"):
+                    decisions.append({
+                        "step_id": step.get("id", 0),
+                        "action": "warn",
+                        "checkpoint": "capability_awareness",
+                        "reason": f"Capability '{node.name}' is HIGH RISK — monitor closely",
+                    })
+
+        return decisions
 
     # ═══════════════════════════════════════════════════════════════════
     # 4 Checkpoints + Strategy Override
@@ -441,6 +547,39 @@ class GovernanceKernel:
 
         return {"step_id": step_id, "action": "allow",
                 "reason": f"skill '{skill_name}' 状态 {sv} OK"}
+
+    def _check_capability_for_step(self, skill_name: str, step_id: int) -> dict | None:
+        """Checkpoint 4.5: Capability Taxonomy awareness。
+
+        只观察+限制，不修改 capability 本身。
+        - quarantined → block
+        - experimental → downgrade (提升治理强度)
+        - high_risk → 记录但允许通过
+        """
+        if not self._capability_registry or not skill_name:
+            return None
+
+        matches = self._capability_registry.search(keyword=skill_name)
+        for node in matches:
+            if node.maturity == "quarantined":
+                return {
+                    "step_id": step_id, "action": "block",
+                    "checkpoint": "capability_awareness",
+                    "reason": f"Capability '{node.name}' is QUARANTINED in taxonomy",
+                }
+            if node.maturity == "experimental":
+                return {
+                    "step_id": step_id, "action": "downgrade",
+                    "checkpoint": "capability_awareness",
+                    "reason": f"Capability '{node.name}' is EXPERIMENTAL — governance strengthened",
+                }
+            if node.risk_level in ("high", "critical"):
+                return {
+                    "step_id": step_id, "action": "warn",
+                    "checkpoint": "capability_awareness",
+                    "reason": f"Capability '{node.name}' is HIGH RISK — monitoring",
+                }
+        return None
 
     # ═══════════════════════════════════════════════════════════════════
     # Utilities
