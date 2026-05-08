@@ -108,10 +108,12 @@ class GovernanceKernel:
         # → {"filtered_plan": ..., "strategy": "...", "decisions": [...]}
     """
 
-    def __init__(self, skill_governor=None, ats=None, tool_policy=None):
+    def __init__(self, skill_governor=None, ats=None, tool_policy=None,
+                 stabilizer=None):
         self._governor = skill_governor
         self._ats = ats
         self._tool_policy = tool_policy
+        self._stabilizer = stabilizer
 
     # ═══════════════════════════════════════════════════════════════════
     # Public API
@@ -223,8 +225,16 @@ class GovernanceKernel:
         if config.get("reorder_enabled", True):
             filtered = self._reorder_steps(filtered)
 
+        # Post-process: stabilize (convergence layer)
+        if self._stabilizer:
+            filtered_plan = {**plan, "steps": filtered}
+            filtered_plan = self._stabilizer.stabilize_plan(filtered_plan)
+            decisions = self._stabilizer.stabilize_decisions(decisions)
+        else:
+            filtered_plan = {**plan, "steps": filtered}
+
         return {
-            "filtered_plan": {**plan, "steps": filtered},
+            "filtered_plan": filtered_plan,
             "strategy": strategy,
             "decisions": decisions,
         }
