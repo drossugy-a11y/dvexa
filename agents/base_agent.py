@@ -31,36 +31,44 @@ class BaseAgent:
 
     def plan(self, task_input: str) -> dict:
         system_prompt = (
-            "你是一个任务规划器。分析用户任务并输出JSON格式的计划。\n\n"
-            "输出格式：\n"
+            "你是一个任务规划器。分析用户任务并输出严格结构化执行计划。\n\n"
+            "🚨 强约束（必须遵守）\n"
+            "- 只能输出 JSON，不能有任何解释、注释、markdown\n"
+            "- 不能输出多余文本\n"
+            "- 输出必须可被 json.loads 直接解析\n\n"
+            "📦 输出 Schema：\n"
             '{\n'
             '  "goal": "任务目标简述",\n'
             '  "steps": [\n'
             '    {\n'
             '      "id": 1,\n'
             '      "action": "步骤描述",\n'
-            '      "phase": "阶段名称",\n'
-            '      "risk": "HIGH|MEDIUM|LOW",\n'
-            '      "depends_on": []\n'
+            '      "type": "reasoning | tool | memory",\n'
+            '      "tool": "llm | code_executor | http_request（可选）",\n'
+            '      "input": "工具输入（可选）"\n'
             '    }\n'
             '  ]\n'
             '}\n\n'
-            "可用工具: llm（通用AI）、http_request（网络请求）、code_executor（Python代码执行）。\n"
-            "规划要求：\n"
-            "1. 将任务分解为多个阶段（phase），每个阶段有明确目标\n"
-            "2. 每步标注风险等级：HIGH（可能出错/依赖外部）、MEDIUM、LOW（确定性操作）\n"
-            "3. 标注步骤间依赖（depends_on为前置步骤id列表，无依赖则为空数组）\n"
-            "4. 步骤id从1开始递增\n"
-            "5. 输出必须是严格的JSON，不要任何额外文本"
+            "🧭 规划规则：\n"
+            "1. steps 从 1 开始递增，数量 3-7 步\n"
+            "2. 每步必须明确 type：reasoning（推理）/ tool（工具调用）/ memory（记忆）\n"
+            "3. tool 类型步骤必须包含 tool + input 字段\n"
+            "4. reasoning 类型不允许包含 tool 字段\n\n"
+            "🧠 工具选择规则：\n"
+            "- code/计算 → code_executor\n"
+            "- 信息获取 → llm\n"
+            "- 记录/存储 → memory\n"
+            "- 不确定 → reasoning\n\n"
+            "📤 只输出 JSON，不允许任何额外内容。"
         )
-        prompt = f"任务：{task_input}"
+        prompt = f"用户任务：{task_input}"
         result = self.llm_tool.call(prompt, system_prompt=system_prompt)
         data = safe_parse_plan(result["content"])
         if data is not None:
             return data
         return {
-            "goal": "执行任务",
-            "steps": [{"id": 1, "action": task_input, "phase": "执行", "risk": "LOW", "depends_on": []}],
+            "goal": task_input,
+            "steps": [{"id": 1, "action": task_input, "type": "tool", "tool": "llm", "input": task_input}],
         }
 
     def replan(self, original_input: str, failed_step: dict, error_msg: str):
@@ -70,13 +78,13 @@ class BaseAgent:
         )
         system_prompt = (
             "前一步执行失败，请重新规划剩余步骤。\n"
-            "分析失败原因属于以下哪种类型：\n"
-            "1. TOOL_ERROR：工具调用失败（网络、代码执行等）\n"
+            "分析失败原因类型：\n"
+            "1. TOOL_ERROR：工具调用失败\n"
             "2. AGENT_ERROR：LLM输出不符合预期\n"
-            "3. VALIDATION_ERROR：步骤输出验证不通过\n"
-            "4. RETRY_EXHAUSTED：重试次数耗尽\n\n"
-            "输出JSON格式：\n"
-            '{"goal": "...", "failure_type": "TOOL_ERROR", "steps": [{"id": 1, "action": "..."}]}'
+            "3. RETRY_EXHAUSTED：重试次数耗尽\n\n"
+            "只输出JSON，严格符合以下Schema：\n"
+            '{"goal": "...", "failure_type": "TOOL_ERROR", '
+            '"steps": [{"id": 1, "action": "...", "type": "reasoning | tool | memory"}]}'
         )
         prompt = f"原始任务：{original_input}\n执行情况：{context_info}\n新计划JSON："
         result = self.llm_tool.call(prompt, system_prompt=system_prompt)

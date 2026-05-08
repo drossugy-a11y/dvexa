@@ -63,9 +63,15 @@ class Executor:
     def execute_step(self, task_state, step: dict, context: dict) -> dict:
         step_id = step.get("id", context.get("step_index", 0) + 1)
         action = step.get("action", "")
+        step_type = step.get("type", "")
+
+        # Schema-native: use explicit tool field, fall back to keyword matching
+        if step_type == "reasoning":
+            tool_name = "llm"
+        else:
+            tool_name = step.get("tool") or self._select_tool(action)
 
         agent_output = self.agent.execute_step(step, context)
-        tool_name = self._select_tool(action)
         tool_input = agent_output.get("output", action)
 
         # Guard: prevent wrong tool matching
