@@ -1,9 +1,26 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI(title="DVexa v1.8")
 kernel = None
 _observer = None
+_surface_ws = None
+
+
+def set_surface_ws(ws):
+    global _surface_ws
+    _surface_ws = ws
+
+
+# CORS — 允许前端开发服务器 (localhost:5173) 和构建产物
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class TaskRequest(BaseModel):
@@ -59,3 +76,20 @@ async def list_tasks():
 @app.get("/health")
 async def health():
     return _response(True, data={"status": "ok"})
+
+
+@app.websocket("/ws/surface")
+async def surface_websocket(ws: WebSocket):
+    global _surface_ws
+    if not _surface_ws:
+        await ws.close(code=1011, reason="Surface not initialized")
+        return
+    try:
+        await _surface_ws.connect(ws)
+        while True:
+            await ws.receive_text()  # keep-alive ping/pong
+    except WebSocketDisconnect:
+        _surface_ws.disconnect(ws)
+    except Exception:
+        if ws in getattr(_surface_ws, "_connections", []):
+            _surface_ws.disconnect(ws)

@@ -9,6 +9,7 @@
   - Capabilities / Skills / Governance
 """
 
+from pathlib import Path
 import uvicorn
 from config.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
 from core.kernel import DVexaKernel
@@ -116,17 +117,6 @@ def main():
         strategy_stats=strategy_stats,
     )
 
-    decision_layer = GovernanceKernel(
-        skill_governor=governor,
-        ats=ats,
-        stabilizer=governance_stabilizer,
-        complexity_budget=complexity_budget,
-        cost_model=cost_model,
-        global_optimizer=global_optimizer,
-        stability_layer=stability_layer,
-        capability_registry=taxonomy_registry,
-    )
-
     # ─── Capability Layer（唯一增长区） ──────────────────────────────────
     # 新增能力只需在这里注册 keyword + handler
     # Router 自动构建 Executor 兼容的 tool_registry
@@ -156,7 +146,7 @@ def main():
     evolution_tracker = EvolutionTracker()
 
     # 自动注册所有 skills
-    for skill_name, skill_def in router.registry.all_skills().items():
+    for skill_name, skill_def in router._registry.all_skills().items():
         node = CapabilityNode(
             capability_id=f"taxonomy:skill:{skill_name}",
             name=skill_name,
@@ -171,6 +161,17 @@ def main():
             lifecycle_state=LifecycleState.ACTIVE.value,
         )
         taxonomy_registry.register(node)
+
+    decision_layer = GovernanceKernel(
+        skill_governor=governor,
+        ats=ats,
+        stabilizer=governance_stabilizer,
+        complexity_budget=complexity_budget,
+        cost_model=cost_model,
+        global_optimizer=global_optimizer,
+        stability_layer=stability_layer,
+        capability_registry=taxonomy_registry,
+    )
 
     # 自动注册 governance modules
     _register_governance_capabilities(taxonomy_registry)
@@ -215,6 +216,49 @@ def main():
             )
         )
     ))
+
+    # ─── DVX Surface (v1) — 自省前端系统 ─────────────────────────────
+    from surface.snapshot_builder import SystemSnapshotBuilder
+    from surface.state_cache import StateCache
+    from surface.api import create_surface_router
+    from surface.websocket import SurfaceWebSocket
+    from fastapi.staticfiles import StaticFiles
+
+    surface_cache = StateCache()
+    surface_builder = SystemSnapshotBuilder(
+        capability_registry=taxonomy_registry,
+        evolution_tracker=evolution_tracker,
+        meta_control_plane=meta_control_plane,
+        memory=memory,
+        insight_agent=insight_agent,
+        governor=governor,
+        cost_model=cost_model,
+        pattern_registry=None,  # 按需添加
+        external_reporter=external_reporter,
+    )
+    surface_router = create_surface_router(surface_builder, surface_cache)
+    app.include_router(surface_router)
+
+    # 挂载前端静态文件
+    dist_path = Path(__file__).parent / "surface-ui" / "dist"
+    if dist_path.exists():
+        app.mount("/", StaticFiles(directory=str(dist_path), html=True), name="surface-ui")
+
+    # WebSocket 后台广播（在 uvicorn 启动后运行）
+    surface_ws = SurfaceWebSocket(surface_builder, interval=5.0)
+    from api.server import set_surface_ws
+    set_surface_ws(surface_ws)
+
+    import asyncio
+    import threading
+
+    def _start_ws_broadcast():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(surface_ws.start_background_broadcast())
+
+    ws_thread = threading.Thread(target=_start_ws_broadcast, daemon=True)
+    ws_thread.start()
 
     # ─── OpenCode Assimilation Pipeline (v3) — 只读模式 ─────────────────
     _init_opencode_assimilation_pipeline(
