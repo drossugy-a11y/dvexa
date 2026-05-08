@@ -1,6 +1,6 @@
-"""Assimilation Log — 系统进化历史档案（v1.89）
+"""吞并日志系统 — 系统进化历史档案（v1.89）
 
-每次 external assimilator 分析外部项目后，自动生成标准化日志文件。
+每次外部分析器分析外部项目后，自动生成标准化日志文件。
 日志是 DVexa 的"进化记忆"，纯观察层，不参与任何控制流。
 
 约束：
@@ -24,9 +24,9 @@ from pathlib import Path
 from typing import Any
 
 
-# ─── Constants ────────────────────────────────────────────────────────────────
+# ─── 常量 ──────────────────────────────────────────────────────────────────────
 
-LOG_DIR = Path(__file__).resolve().parent.parent / "ZSK" / "assimilation_logs"
+LOG_DIR = Path(__file__).resolve().parent.parent / "ZSK" / "TBRZ"
 
 VALID_DECISIONS = {"approved", "rejected", "pending"}
 
@@ -35,10 +35,11 @@ SEARCH_FIELDS = {
 }
 
 
-# ─── Data Structures ──────────────────────────────────────────────────────────
+# ─── 数据结构 ──────────────────────────────────────────────────────────────────
 
 @dataclass
 class CandidateCapability:
+    """候选吞并能力"""
     candidate_skill: str
     source_module: str
     confidence: float = 0.0
@@ -49,6 +50,7 @@ class CandidateCapability:
 
 @dataclass
 class RejectedCapability:
+    """被拒绝的能力"""
     candidate_skill: str
     source_module: str
     reason: str = ""
@@ -56,6 +58,7 @@ class RejectedCapability:
 
 @dataclass
 class ObservedArchitecture:
+    """观察到的架构"""
     modules: list[str] = field(default_factory=list)
     agents: list[str] = field(default_factory=list)
     tools: list[str] = field(default_factory=list)
@@ -65,7 +68,7 @@ class ObservedArchitecture:
 
 @dataclass
 class AssimilationLogEntry:
-    """单次外部项目分析日志。"""
+    """单次外部项目吞并分析日志。"""
     source_project: str
     github_url: str = ""
     analyzed_commit: str = ""
@@ -103,12 +106,12 @@ class AssimilationLogEntry:
         return cls(**data)
 
 
-# ─── Logger ───────────────────────────────────────────────────────────────────
+# ─── 日志器 ────────────────────────────────────────────────────────────────────
 
 class AssimilationLogger:
-    """同化日志记录器。
+    """吞并日志记录器。
 
-    管理 ZSK/assimilation_logs/ 目录。
+    管理 ZSK/TBRZ/ 目录，所有日志以 TB 序号命名。
     所有操作纯文件 IO，不涉及任何系统控制层。
     """
 
@@ -123,11 +126,10 @@ class AssimilationLogger:
     # ─── 写入 ────────────────────────────────────────────────────────────
 
     def save_log(self, entry: AssimilationLogEntry) -> str:
-        """保存日志到文件，返回文件名。"""
+        """保存日志到文件（JSON 格式），返回文件名。"""
         filename = self._make_filename(entry, self._log_dir)
         filepath = self._log_dir / filename
 
-        # JSON 版本
         data = entry.to_dict()
         filepath.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -155,10 +157,10 @@ class AssimilationLogger:
             return None
 
     def list_all(self) -> list[str]:
-        """列出所有日志文件名。"""
+        """列出所有日志文件名（仅 JSON）。"""
         if not self._log_dir.exists():
             return []
-        files = sorted(self._log_dir.glob("*.json"))
+        files = sorted(self._log_dir.glob("TB*.json"))
         return [f.name for f in files]
 
     # ─── 搜索 ────────────────────────────────────────────────────────────
@@ -212,7 +214,7 @@ class AssimilationLogger:
         return results
 
     def summarize_project_history(self, project_name: str) -> dict:
-        """汇总指定项目的分析历史。
+        """汇总指定项目的吞并分析历史。
 
         Returns:
             {
@@ -254,30 +256,26 @@ class AssimilationLogger:
     # ─── 内部方法 ────────────────────────────────────────────────────────
 
     def _make_filename(self, entry: AssimilationLogEntry, log_dir: Path | None = None, md: bool = False) -> str:
-        """生成唯一文件名（自动处理冲突）。"""
-        date_part = entry.analysis_time[:10].replace("-", "")
-        project_part = self._sanitize_filename(entry.source_project)
+        """生成下一个 TB 序号文件名。
+
+        扫描全部 TB 文件实现统一编号，JSON 和 MD 共享序号序列。
+        例：TB1.json, TB2.md, TB3.json, ...
+        """
         ext = ".md" if md else ".json"
-        base_name = f"{date_part}_{project_part}"
-        filename = f"{base_name}{ext}"
 
         if log_dir is None:
-            return filename
+            log_dir = self._log_dir
 
-        # 冲突时追加序号
-        counter = 1
-        while (log_dir / filename).exists():
-            filename = f"{base_name}_{counter}{ext}"
-            counter += 1
+        # 扫描所有 TB 文件（无论扩展名），找到最大序号
+        max_num = 0
+        for f in log_dir.glob("TB*"):
+            match = re.match(r"^TB(\d+)\.(json|md)$", f.name)
+            if match:
+                num = int(match.group(1))
+                if num > max_num:
+                    max_num = num
 
-        return filename
-
-    def _sanitize_filename(self, name: str) -> str:
-        """净化文件名（防止路径穿越/非法字符）。"""
-        # 只保留字母数字下划线连字符
-        sanitized = re.sub(r"[^\w\-]", "_", name)
-        sanitized = sanitized.strip("_")
-        return sanitized.lower() if sanitized else "unknown"
+        return f"TB{max_num + 1}{ext}"
 
     def _match_any_field(self, entry: AssimilationLogEntry, keyword: str) -> bool:
         """检查日志任意字段是否包含关键词。"""
@@ -300,7 +298,7 @@ class AssimilationLogger:
         return False
 
     def _to_markdown(self, entry: AssimilationLogEntry) -> str:
-        """生成 Markdown 格式日志。"""
+        """生成中文 Markdown 格式日志。"""
         lines = [
             "---",
             f"project: {entry.source_project}",
@@ -309,23 +307,23 @@ class AssimilationLogger:
             f"analyzed: {entry.analysis_time}",
             "---",
             "",
-            f"# Assimilation Report: {entry.source_project}",
+            f"# 吞并分析报告：{entry.source_project}",
             "",
-            "## Source",
+            "## 来源信息",
             "",
-            f"- project_name: {entry.source_project}",
-            f"- github_url: {entry.github_url}",
-            f"- analyzed_commit: {entry.analyzed_commit}",
-            f"- analysis_time: {entry.analysis_time}",
+            f"- 项目名称：{entry.source_project}",
+            f"- GitHub 地址：{entry.github_url}",
+            f"- 分析提交：{entry.analyzed_commit}",
+            f"- 分析时间：{entry.analysis_time}",
             "",
         ]
 
         arch = entry.observed_architecture
-        lines.append("## Observed Architecture")
+        lines.append("## 观察到的架构")
         lines.append("")
-        for field_name, label in [("modules", "模块结构"), ("agents", "Agent结构"),
-                                   ("tools", "Tool结构"), ("memory", "Memory结构"),
-                                   ("workflow", "Workflow结构")]:
+        for field_name, label in [("modules", "模块结构"), ("agents", "Agent 结构"),
+                                   ("tools", "工具结构"), ("memory", "Memory 结构"),
+                                   ("workflow", "工作流结构")]:
             items = getattr(arch, field_name, [])
             if items:
                 lines.append(f"### {label}")
@@ -334,34 +332,34 @@ class AssimilationLogger:
                 lines.append("")
 
         if entry.candidate_capabilities:
-            lines.append("## Candidate Capabilities")
+            lines.append("## 候选吞并能力")
             lines.append("")
             for c in entry.candidate_capabilities:
                 lines.append(f"### {c.candidate_skill}")
-                lines.append(f"- source_module: {c.source_module}")
-                lines.append(f"- confidence: {c.confidence}")
-                lines.append(f"- complexity: {c.complexity}")
-                lines.append(f"- risk: {c.risk}")
+                lines.append(f"- 来源模块：{c.source_module}")
+                lines.append(f"- 置信度：{c.confidence}")
+                lines.append(f"- 复杂度：{c.complexity}")
+                lines.append(f"- 风险等级：{c.risk}")
                 if c.estimated_value:
-                    lines.append(f"- estimated_value: {c.estimated_value}")
+                    lines.append(f"- 预估价值：{c.estimated_value}")
                 lines.append("")
 
         if entry.rejected_capabilities:
-            lines.append("## Rejected Capabilities")
+            lines.append("## 已拒绝的能力")
             lines.append("")
             for r in entry.rejected_capabilities:
                 lines.append(f"### {r.candidate_skill}")
-                lines.append(f"- source_module: {r.source_module}")
-                lines.append(f"- reason: {r.reason}")
+                lines.append(f"- 来源模块：{r.source_module}")
+                lines.append(f"- 拒绝原因：{r.reason}")
                 lines.append("")
 
-        lines.append(f"## Assimilation Decision")
+        lines.append("## 吞并决策")
         lines.append("")
         lines.append(f"- **{entry.decision}**")
         lines.append("")
 
         if entry.future_notes:
-            lines.append("## Future Notes")
+            lines.append("## 后续备注")
             lines.append("")
             lines.append(entry.future_notes)
             lines.append("")

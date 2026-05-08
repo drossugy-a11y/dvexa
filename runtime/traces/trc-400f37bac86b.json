@@ -1,0 +1,213 @@
+{
+  "trace_id": "trc-400f37bac86b",
+  "input": "ACTION plugin_manager {\n    intent: \"execution\",\n    mode: \"simulate\",\n    constraint: \"write access needed for plugin_manager + tool_policy + loader\",\n    output: \"multi-module integration report\"\n}",
+  "timestamp": "2026-05-07T19:30:55.596550",
+  "total_latency_s": 0.001534002018161118,
+  "overall_status": "complete",
+  "passed": true,
+  "risk_score": 0.0,
+  "events": [
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "load",
+      "type": "info",
+      "payload": {
+        "target": "plugin_manager",
+        "intent": "execution",
+        "mode": "simulate",
+        "constraint": "write access needed for plugin_manager + tool_policy + loader",
+        "output": "multi-module integration report",
+        "warnings": []
+      },
+      "timestamp": 1778182255.5966122
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "semantic",
+      "type": "decision",
+      "payload": {
+        "intent": "unknown",
+        "threat_type": "none",
+        "risk_score": 0.0,
+        "governance_impact": "advisory",
+        "mapped_skill": null,
+        "reason": "intent=unknown(0.0), threat=none(0.0), decision=advisory, mapped=none"
+      },
+      "timestamp": 1778182255.5968025
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "validate",
+      "type": "decision",
+      "payload": {
+        "target": "plugin_manager",
+        "passed": true,
+        "risk_score": 0.05,
+        "risk_level": "low",
+        "phase_count": 7,
+        "passed_phases": 7,
+        "failed_phases": 0,
+        "summary": "PASSED | 0 failed | 2 warnings | risk low (0.05)",
+        "phases": [
+          {
+            "phase": "parse",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Parsed target 'plugin_manager' with context keys: ['intent', 'mode', 'threat_type', 'sgl_risk_score', 'governance_impact', 'constraint']"
+          },
+          {
+            "phase": "safety",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Target 'plugin_manager' is safe"
+          },
+          {
+            "phase": "mapping",
+            "passed": true,
+            "verdict": "ATSVerdict.WARN",
+            "details": "Target 'plugin_manager' does not match any known capability type"
+          },
+          {
+            "phase": "governance",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Intent 'unknown' accepted"
+          },
+          {
+            "phase": "risk",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Risk score: 0.05, level: low"
+          },
+          {
+            "phase": "simulation",
+            "passed": true,
+            "verdict": "ATSVerdict.WARN",
+            "details": "Target 'plugin_manager' requests write access"
+          },
+          {
+            "phase": "decision",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "approved: All checks passed"
+          }
+        ]
+      },
+      "timestamp": 1778182255.5971167
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "started",
+        "module": "plugin_manager",
+        "state": "analyzing",
+        "risk_score": 0.05
+      },
+      "timestamp": 1778182255.597345
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "analysis_complete",
+        "module": "plugin_manager",
+        "state": "testing",
+        "capabilities": []
+      },
+      "timestamp": 1778182255.5973513
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "schedule",
+      "type": "decision",
+      "payload": {
+        "status": "testing_complete",
+        "module": "plugin_manager",
+        "state": "approved",
+        "test_passed": true,
+        "risk_score": 0.05,
+        "reason": "测试通过，风险 0.05 < 0.6",
+        "final_state": "approved"
+      },
+      "timestamp": 1778182255.597367
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "logged",
+        "module": "plugin_manager",
+        "state": "logged"
+      },
+      "timestamp": 1778182255.597481
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "confirmed",
+        "module": "plugin_manager",
+        "state": "next",
+        "message": "人工确认完成，准备下一轮"
+      },
+      "timestamp": 1778182255.5974846
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "ready_for_next",
+        "round": 1,
+        "state": "ready",
+        "last_completed": "plugin_manager"
+      },
+      "timestamp": 1778182255.5974987
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "govern",
+      "type": "info",
+      "payload": {
+        "skill_count": 0,
+        "quarantined_count": 0,
+        "ecosystem_stability": 1.0,
+        "churn_rate": 0.0,
+        "skill_statuses": {},
+        "global_policy_deny": []
+      },
+      "timestamp": 1778182255.5979137
+    },
+    {
+      "trace_id": "trc-400f37bac86b",
+      "stage": "log",
+      "type": "info",
+      "payload": {
+        "trace_id": "trc-400f37bac86b",
+        "timestamp": "2026-05-07T19:30:55.596550",
+        "input": "ACTION plugin_manager {\n    intent: \"execution\",\n    mode: \"simulate\",\n    constraint: \"write access needed for plugin_manager + tool_policy + loader\",\n    output: \"multi-module integration report\"\n}",
+        "passed": false,
+        "risk_score": 0.0,
+        "stage_count": 10,
+        "stages": [
+          "load",
+          "semantic",
+          "validate",
+          "schedule",
+          "schedule",
+          "schedule",
+          "schedule",
+          "schedule",
+          "schedule",
+          "govern"
+        ]
+      },
+      "timestamp": 1778182255.5980186
+    }
+  ]
+}

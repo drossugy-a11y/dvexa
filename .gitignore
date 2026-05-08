@@ -72,3 +72,10 @@ __pycache__/
 .venv/
 .env
 .baseline.json
+
+# Internal knowledge base — not part of OSS distribution
+ZSK/
+DvexaZSK/
+
+# Temporary test files
+stress_collapse_test.py

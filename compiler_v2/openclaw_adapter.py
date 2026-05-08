@@ -45,8 +45,11 @@ class OpenClawMemoryAdapter:
             return self._static_signals()
 
         signals: list[CapabilitySignal] = []
-        for output in memory_outputs:
-            signals.extend(self._parse_output(output))
+        for i, output in enumerate(memory_outputs):
+            try:
+                signals.extend(self._parse_output(output))
+            except Exception:
+                continue  # 单个元素解析失败不影响整体
         return signals
 
     def _static_signals(self) -> list[CapabilitySignal]:
@@ -107,9 +110,14 @@ class OpenClawMemoryAdapter:
             ),
         ]
 
-    def _parse_output(self, output: dict) -> list[CapabilitySignal]:
-        """解析单个 memory 输出为能力信号。"""
+    def _parse_output(self, output: Any) -> list[CapabilitySignal]:
+        """解析单个 memory 输出为能力信号。
+
+        防御性解析: 非 dict 输入安全返回空列表。
+        """
         signals: list[CapabilitySignal] = []
+        if not isinstance(output, dict):
+            return signals
         text = str(output.get("text", "")) + " " + str(output.get("snippet", ""))
         source = output.get("source", "memory")
         path = output.get("path", "")

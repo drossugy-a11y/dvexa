@@ -128,9 +128,26 @@ class DXBOptimizer:
         保留:
         - 所有被其他步骤依赖的步骤
         - 所有作为 DAG 入口的步骤
+        - GOVERNANCE-PRESENCE LOCK: 有 SKILL 但无 GOV 时不删除任何步骤
+        - GOVERNANCE_CHECK 和 SKILL 步骤受保护，不允许被删除
         """
-        if len(dxb.steps) <= 1:
+        if len(dxb.steps) == 0:
             return
+
+        # GOVERNANCE-PRESENCE LOCK
+        # 如果存在 SKILL 但没有 GOVERNANCE_CHECK，不执行任何删除
+        # 治理缺失应由 validator 阻断，optimizer 不隐式"修复"它
+        has_gov = any(s.step_type == "GOVERNANCE_CHECK" for s in dxb.steps)
+        has_skill = any(s.step_type == "SKILL" for s in dxb.steps)
+        if has_skill and not has_gov:
+            report.optimizations_applied.append("gov_lock_preserved")
+            return
+
+        # 保护 GOV 和 SKILL 步骤不被删除
+        protected_ids: set[str] = set()
+        for step in dxb.steps:
+            if step.step_type in ("GOVERNANCE_CHECK", "SKILL"):
+                protected_ids.add(step.id)
 
         # Find all steps that are referenced as dependencies
         referenced: set[str] = set()
@@ -139,11 +156,12 @@ class DXBOptimizer:
                 referenced.add(dep)
 
         # Steps that are not referenced by anyone AND have no dependencies
-        # are truly isolated
+        # are truly isolated — EXCLUDING protected types
         isolated: set[str] = set()
         for step in dxb.steps:
             if step.id not in referenced and not step.dependencies:
-                isolated.add(step.id)
+                if step.id not in protected_ids:
+                    isolated.add(step.id)
 
         if isolated:
             new_steps = [s for s in dxb.steps if s.id not in isolated]

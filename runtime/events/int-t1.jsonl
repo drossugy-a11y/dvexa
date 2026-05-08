@@ -1,0 +1,3 @@
+{"trace_id": "int-t1", "stage": "load", "type": "info", "payload": {"msg": "hello"}, "timestamp": 1778183795.0514898, "metadata": {}}
+{"trace_id": "int-t1", "stage": "semantic", "type": "decision", "payload": {"intent": "greet"}, "timestamp": 1778183795.1514897, "metadata": {}}
+{"trace_id": "int-t1", "stage": "log", "type": "info", "payload": {"msg": "done"}, "timestamp": 1778183795.2514899, "metadata": {}}

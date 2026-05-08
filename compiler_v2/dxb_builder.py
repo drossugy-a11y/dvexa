@@ -36,6 +36,7 @@ class DXBBuilder:
         ir: CapabilityIR,
         events: list | None = None,
         memory_outputs: list[dict] | None = None,
+        diagnostics: list | None = None,
     ) -> DXB:
         """从 CapabilityIR 构建完整的 DXB。
 
@@ -43,13 +44,25 @@ class DXBBuilder:
             ir: 能力中间表示
             events: 原始事件列表（用于提取治理约束）
             memory_outputs: 外部 memory 输出（OpenClaw #003）
+            diagnostics: 诊断列表（用于 IR-DXB 对齐报告）
 
         Returns:
             完整的 DXB 对象
         """
         dxb_id = f"dxb:{ir.trace_id or uuid.uuid4().hex[:8]}"
+        if diagnostics is None:
+            diagnostics = []
 
         steps = self._build_steps(ir)
+
+        # IR-DXB 对齐检查
+        if len(steps) == 0 and ir.capability_count() > 0:
+            from compiler_v2.dvx_compiler import CompilationDiagnostic
+            diagnostics.append(CompilationDiagnostic(
+                stage="build_dxb",
+                level="warning",
+                message=f"IR-DXB MISMATCH: IR has {ir.capability_count()} nodes but DXB has 0 steps",
+            ))
 
         constraints = self._build_constraints(ir, events or [])
 
@@ -77,11 +90,32 @@ class DXBBuilder:
         governance_deps: list[str] = []
         skill_deps: list[str] = []
 
+        def _step_risk(node_name: str) -> float:
+            """从 risk_signals 中查找步骤风险，兼容 payload: 前缀 key。
+
+            查找顺序:
+            1. node_name 精确匹配（如 "semantic_intent"）
+            2. payload:node_name 前缀匹配（如 "payload:semantic_intent"）
+            3. 威胁类型匹配（遍历 risk_signals 找最大匹配值）
+            """
+            # 精确匹配
+            if node_name in ir.risk_signals:
+                return ir.risk_signals[node_name]
+            # payload: 前缀匹配
+            payload_key = f"payload:{node_name}"
+            if payload_key in ir.risk_signals:
+                return ir.risk_signals[payload_key]
+            # 兜底: 查找任何包含 node_name 的 key
+            for key, val in ir.risk_signals.items():
+                if node_name in key or key in node_name:
+                    return val
+            return 0.0
+
         # Phase 1: Governance checks first
         for node in ir.capabilities:
             if node.node_type == "GOVERNANCE_CHECK":
                 sid = f"step:{node.id}"
-                risk = ir.risk_signals.get(node.name, 0.0)
+                risk = _step_risk(node.name)
                 steps.append(CapabilityStep(
                     id=sid,
                     step_type="GOVERNANCE_CHECK",
@@ -96,7 +130,7 @@ class DXBBuilder:
         for node in ir.capabilities:
             if node.node_type == "SKILL":
                 sid = f"step:{node.id}"
-                risk = ir.risk_signals.get(node.name, 0.0)
+                risk = _step_risk(node.name)
                 steps.append(CapabilityStep(
                     id=sid,
                     step_type="SKILL",
@@ -112,7 +146,7 @@ class DXBBuilder:
         for node in ir.capabilities:
             if node.node_type == "TOOL":
                 sid = f"step:{node.id}"
-                risk = ir.risk_signals.get(node.name, 0.0)
+                risk = _step_risk(node.name)
                 steps.append(CapabilityStep(
                     id=sid,
                     step_type="TOOL",

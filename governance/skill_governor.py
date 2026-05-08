@@ -15,6 +15,7 @@ from capabilities.skill import SkillRegistry, SkillDef
 from governance.skill_score import SkillScore, MINIMUM_SAMPLES
 from governance.lifecycle import SkillStatus, evaluate_lifecycle, evaluate_recovery
 from governance.conflict_detector import ConflictDetector, SkillConflict
+from governance.tool_policy import ToolPolicy, is_tool_allowed, resolve_policy, default_policy, expand_tool_list
 
 # Routing 权重（用于 best_skill_for）
 STATUS_WEIGHTS = {
@@ -36,6 +37,8 @@ class SkillGovernor:
         self._scores: dict[str, SkillScore] = {}
         self._statuses: dict[str, SkillStatus] = {}
         self._conflict_detector = ConflictDetector()
+        self._policies: dict[str, ToolPolicy | None] = {}
+        self._global_policy: ToolPolicy | None = None
         # 恢复验证计数器
         self._recovery_verifications: dict[str, int] = {}
 
@@ -46,6 +49,38 @@ class SkillGovernor:
         self._registry.register(name, handler, keywords, description)
         self._scores[name] = SkillScore()
         self._statuses[name] = SkillStatus.EXPERIMENTAL
+        self._policies[name] = None  # 使用全局策略
+
+    # ─── 工具策略 ────────────────────────────────────────────────────────
+
+    def set_policy(self, name: str, policy: ToolPolicy):
+        """设置 skill 级策略（最高优先级）。"""
+        self._policies[name] = policy
+
+    def set_global_policy(self, policy: ToolPolicy):
+        """设置全局策略（中间优先级）。"""
+        self._global_policy = policy
+
+    def get_policy(self, name: str) -> ToolPolicy:
+        """获取 skill 的最终生效策略（三层优先级解析后）。"""
+        return resolve_policy(
+            skill_specific=self._policies.get(name),
+            global_policy=self._global_policy,
+        )
+
+    def check_skill_allowed(self, name: str) -> bool:
+        """检查 skill 当前是否被策略允许。"""
+        policy = self.get_policy(name)
+        expanded = expand_tool_list(policy.allow)
+
+        if "all" in policy.allow:
+            return True
+
+        if not expanded:
+            # 空 allow = 允许绝对全部（包括未知），但 deny 仍生效
+            return is_tool_allowed(ToolPolicy(allow=[], deny=policy.deny), name)
+
+        return is_tool_allowed(policy, name)
 
     # ─── 调用追踪 ────────────────────────────────────────────────────────
 

@@ -1,0 +1,6 @@
+{"trace_id": "trc-001", "stage": "load", "type": "info", "payload": {"target": "analyze", "intent": "analysis"}, "timestamp": 1778183650.2841814, "metadata": {}}
+{"trace_id": "trc-001", "stage": "semantic", "type": "decision", "payload": {"intent": "analysis", "risk_score": 0.1}, "timestamp": 1778183650.3841813, "metadata": {}}
+{"trace_id": "trc-001", "stage": "validate", "type": "decision", "payload": {"passed": true, "risk_score": 0.1}, "timestamp": 1778183650.4841814, "metadata": {}}
+{"trace_id": "trc-001", "stage": "schedule", "type": "info", "payload": {"action": "begin", "result": "approved"}, "timestamp": 1778183650.5841813, "metadata": {}}
+{"trace_id": "trc-001", "stage": "govern", "type": "info", "payload": {"skill_count": 5, "stability": 0.95}, "timestamp": 1778183650.6841815, "metadata": {}}
+{"trace_id": "trc-001", "stage": "log", "type": "info", "payload": {"message": "execution complete"}, "timestamp": 1778183650.7841814, "metadata": {}}

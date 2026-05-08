@@ -1,0 +1,220 @@
+{
+  "trace_id": "trc-89d864bebdc6",
+  "input": "ACTION openclaw_scanner {\n    intent: \"analysis\",\n    mode: \"observe\",\n    constraint: \"read-only\",\n    output: \"scan report\"\n}",
+  "timestamp": "2026-05-07T19:10:34.295197",
+  "total_latency_s": 0.0031608340214006603,
+  "overall_status": "complete",
+  "passed": true,
+  "risk_score": 0.0,
+  "dvx_action": {
+    "target": "openclaw_scanner",
+    "intent": "analysis",
+    "mode": "observe",
+    "constraint": "read-only",
+    "output": "scan report",
+    "warnings": []
+  },
+  "sgl_result": {
+    "intent": "analysis",
+    "threat_type": "none",
+    "risk_score": 0.0,
+    "governance_impact": "advisory",
+    "mapped_skill": "external_scanner",
+    "reason": "intent=analysis(0.9), threat=none(0.0), decision=advisory, mapped=external_scanner"
+  },
+  "ats_result": {
+    "target": "openclaw_scanner",
+    "passed": true,
+    "phase_count": 7,
+    "passed_phases": 7,
+    "failed_phases": 0,
+    "risk_score": 0.0,
+    "risk_level": "low",
+    "summary": "PASSED | 0 failed | 0 warnings | risk low (0.0)",
+    "phases": [
+      {
+        "phase": "parse",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Parsed target 'openclaw_scanner' with context keys: ['intent', 'mode', 'threat_type', 'sgl_risk_score', 'governance_impact', 'constraint']"
+      },
+      {
+        "phase": "safety",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Target 'openclaw_scanner' is safe"
+      },
+      {
+        "phase": "mapping",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Target 'openclaw_scanner' maps to capabilities: scanner"
+      },
+      {
+        "phase": "governance",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Intent 'analysis' accepted"
+      },
+      {
+        "phase": "risk",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Risk score: 0.0, level: low"
+      },
+      {
+        "phase": "simulation",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Target 'openclaw_scanner' simulation completed (read-only)"
+      },
+      {
+        "phase": "decision",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "approved: All checks passed"
+      }
+    ]
+  },
+  "scheduler_decision": {
+    "steps": [
+      {
+        "action": "begin",
+        "result": {
+          "status": "started",
+          "module": "openclaw_scanner",
+          "state": "analyzing",
+          "risk_score": 0.0
+        }
+      },
+      {
+        "action": "complete_analysis",
+        "result": {
+          "status": "analysis_complete",
+          "module": "openclaw_scanner",
+          "state": "testing",
+          "capabilities": [
+            "scanner"
+          ]
+        }
+      },
+      {
+        "action": "complete_testing",
+        "result": {
+          "status": "testing_complete",
+          "module": "openclaw_scanner",
+          "state": "approved",
+          "test_passed": true,
+          "risk_score": 0.0,
+          "reason": "测试通过，风险 0.0 < 0.6"
+        }
+      },
+      {
+        "action": "log",
+        "result": {
+          "status": "logged",
+          "module": "openclaw_scanner",
+          "state": "logged"
+        }
+      },
+      {
+        "action": "confirm_human",
+        "result": {
+          "status": "confirmed",
+          "module": "openclaw_scanner",
+          "state": "next",
+          "message": "人工确认完成，准备下一轮"
+        }
+      },
+      {
+        "action": "next_round",
+        "result": {
+          "status": "ready_for_next",
+          "round": 1,
+          "state": "ready",
+          "last_completed": "openclaw_scanner"
+        }
+      }
+    ],
+    "final_state": "ready",
+    "error": null,
+    "risk_score": 0.0
+  },
+  "governance_snapshot": {
+    "skill_count": 0,
+    "quarantined_count": 0,
+    "ecosystem_stability": 1.0,
+    "churn_rate": 0.0,
+    "skill_statuses": {},
+    "global_policy_deny": []
+  },
+  "execution_trace": [
+    {
+      "stage": "load",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.295318",
+      "latency_s": 9.934901027008891e-05,
+      "input_snapshot": "ACTION openclaw_scanner {\n    intent: \"analysis\",\n    mode: \"observe\",\n    constraint: \"read-only\",\n    output: \"scan report\"\n}",
+      "output_snapshot": "{'target': 'openclaw_scanner', 'intent': 'analysis', 'mode': 'observe', 'constraint': 'read-only', 'output': 'scan report', 'warnings': []}"
+    },
+    {
+      "stage": "semantic",
+      "status": "ok",
+      "decision_reason": "intent=analysis(0.9), threat=none(0.0), decision=advisory, mapped=external_scanner",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.296392",
+      "latency_s": 0.0010692380019463599,
+      "input_snapshot": "ACTION openclaw_scanner {\n    intent: \"analysis\",\n    mode: \"observe\",\n    constraint: \"read-only\",\n    output: \"scan report\"\n}",
+      "output_snapshot": "{'intent': 'analysis', 'threat_type': 'none', 'risk_score': 0.0, 'governance_impact': 'advisory', 'mapped_skill': 'external_scanner', 'reason': 'intent=analysis(0.9), threat=none(0.0), decision=advisory, mapped=external_scanner'}"
+    },
+    {
+      "stage": "validate",
+      "status": "ok",
+      "decision_reason": "PASSED | 0 failed | 0 warnings | risk low (0.0)",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.296620",
+      "latency_s": 0.00022244901629164815,
+      "input_snapshot": "{'target': 'openclaw_scanner', 'context': {'intent': 'analysis', 'mode': 'observe', 'threat_type': 'none', 'sgl_risk_score': 0.0, 'governance_impact': 'advisory', 'constraint': 'read-only'}}",
+      "output_snapshot": "{'target': 'openclaw_scanner', 'passed': True, 'phase_count': 7, 'passed_phases': 7, 'failed_phases': 0, 'risk_score': 0.0, 'risk_level': 'low', 'summary': 'PASSED | 0 failed | 0 warnings | risk low (0.0)', 'phases': [{'phase': 'parse', 'passed': True, 'verdict': 'ATSVerdict.PASS', 'details': \"Parse..."
+    },
+    {
+      "stage": "schedule",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.298310",
+      "latency_s": 0.001679867011262104,
+      "input_snapshot": "{'module_name': 'openclaw_scanner', 'risk_score': 0.0, 'ats_passed': True}",
+      "output_snapshot": "{'steps': [{'action': 'begin', 'result': {'status': 'started', 'module': 'openclaw_scanner', 'state': 'analyzing', 'risk_score': 0.0}}, {'action': 'complete_analysis', 'result': {'status': 'analysis_complete', 'module': 'openclaw_scanner', 'state': 'testing', 'capabilities': ['scanner']}}, {'action'..."
+    },
+    {
+      "stage": "govern",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.298359",
+      "latency_s": 4.043799708597362e-05,
+      "input_snapshot": "{'target': 'openclaw_scanner'}",
+      "output_snapshot": "{'skill_count': 0, 'quarantined_count': 0, 'ecosystem_stability': 1.0}"
+    },
+    {
+      "stage": "log",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.298381",
+      "latency_s": 1.7976999515667558e-05,
+      "input_snapshot": "{'trace_id': 'trc-89d864bebdc6'}",
+      "output_snapshot": "{'trace_id': 'trc-89d864bebdc6', 'timestamp': '2026-05-07T19:10:34.295197', 'input': 'ACTION openclaw_scanner {\\n    intent: \"analysis\",\\n    mode: \"observe\",\\n    constraint: \"read-only\",\\n    output: \"scan report\"\\n}', 'passed': False, 'risk_score': 0.0, 'scheduler_final_state': 'ready', 'stage_co..."
+    }
+  ],
+  "final_output": {
+    "trace_id": "trc-89d864bebdc6",
+    "passed": true,
+    "risk_score": 0.0,
+    "total_latency_s": 0.00316,
+    "scheduler_final_state": "ready"
+  }
+}

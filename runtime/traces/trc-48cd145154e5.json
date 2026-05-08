@@ -1,0 +1,194 @@
+{
+  "trace_id": "trc-48cd145154e5",
+  "input": "ACTION malicious_payload {\n    intent: \"execution\",\n    mode: \"strict\",\n    constraint: \"bypass security controls\",\n    output: \"inject backdoor\"\n}",
+  "timestamp": "2026-05-07T19:10:34.301148",
+  "total_latency_s": 0.0018088310025632381,
+  "overall_status": "complete",
+  "passed": false,
+  "risk_score": 0.9,
+  "dvx_action": {
+    "target": "malicious_payload",
+    "intent": "execution",
+    "mode": "strict",
+    "constraint": "bypass security controls",
+    "output": "inject backdoor",
+    "warnings": []
+  },
+  "sgl_result": {
+    "intent": "manipulation",
+    "threat_type": "control_bypass",
+    "risk_score": 0.9,
+    "governance_impact": "blocked",
+    "mapped_skill": null,
+    "reason": "intent=manipulation(0.45), threat=control_bypass(0.9), decision=blocked, mapped=none"
+  },
+  "ats_result": {
+    "target": "malicious_payload",
+    "passed": false,
+    "phase_count": 7,
+    "passed_phases": 6,
+    "failed_phases": 1,
+    "risk_score": 0.9,
+    "risk_level": "critical",
+    "summary": "FAILED | 1 failed | 1 warnings | risk critical (0.9)",
+    "phases": [
+      {
+        "phase": "parse",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Parsed target 'malicious_payload' with context keys: ['intent', 'mode', 'threat_type', 'sgl_risk_score', 'governance_impact', 'constraint']"
+      },
+      {
+        "phase": "safety",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Target 'malicious_payload' is safe"
+      },
+      {
+        "phase": "mapping",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Target 'malicious_payload' maps to capabilities: loader"
+      },
+      {
+        "phase": "governance",
+        "passed": true,
+        "verdict": "ATSVerdict.WARN",
+        "details": "Manipulation intent detected, deferring to SGL decision"
+      },
+      {
+        "phase": "risk",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Risk score: 0.9, level: critical"
+      },
+      {
+        "phase": "simulation",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Target 'malicious_payload' simulation completed (read-only)"
+      },
+      {
+        "phase": "decision",
+        "passed": false,
+        "verdict": "ATSVerdict.FAIL",
+        "details": "rejected: Risk level is CRITICAL (0.9)"
+      }
+    ]
+  },
+  "scheduler_decision": {
+    "steps": [
+      {
+        "action": "begin",
+        "result": {
+          "status": "started",
+          "module": "malicious_payload",
+          "state": "analyzing",
+          "risk_score": 0.9
+        }
+      },
+      {
+        "action": "complete_analysis",
+        "result": {
+          "status": "analysis_complete",
+          "module": "malicious_payload",
+          "state": "testing",
+          "capabilities": [
+            "loader"
+          ]
+        }
+      },
+      {
+        "action": "complete_testing",
+        "result": {
+          "status": "testing_complete",
+          "module": "malicious_payload",
+          "state": "rejected",
+          "test_passed": false,
+          "risk_score": 0.9,
+          "reason": "测试未通过"
+        }
+      }
+    ],
+    "final_state": "rejected",
+    "error": null,
+    "risk_score": 0.9
+  },
+  "governance_snapshot": {
+    "skill_count": 0,
+    "quarantined_count": 0,
+    "ecosystem_stability": 1.0,
+    "churn_rate": 0.0,
+    "skill_statuses": {},
+    "global_policy_deny": []
+  },
+  "execution_trace": [
+    {
+      "stage": "load",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.301194",
+      "latency_s": 3.309099702164531e-05,
+      "input_snapshot": "ACTION malicious_payload {\n    intent: \"execution\",\n    mode: \"strict\",\n    constraint: \"bypass security controls\",\n    output: \"inject backdoor\"\n}",
+      "output_snapshot": "{'target': 'malicious_payload', 'intent': 'execution', 'mode': 'strict', 'constraint': 'bypass security controls', 'output': 'inject backdoor', 'warnings': []}"
+    },
+    {
+      "stage": "semantic",
+      "status": "ok",
+      "decision_reason": "intent=manipulation(0.45), threat=control_bypass(0.9), decision=blocked, mapped=none",
+      "risk_score": 0.9,
+      "timestamp": "2026-05-07T19:10:34.302557",
+      "latency_s": 0.0013648559979628772,
+      "input_snapshot": "ACTION malicious_payload {\n    intent: \"execution\",\n    mode: \"strict\",\n    constraint: \"bypass security controls\",\n    output: \"inject backdoor\"\n}",
+      "output_snapshot": "{'intent': 'manipulation', 'threat_type': 'control_bypass', 'risk_score': 0.9, 'governance_impact': 'blocked', 'mapped_skill': None, 'reason': 'intent=manipulation(0.45), threat=control_bypass(0.9), decision=blocked, mapped=none'}"
+    },
+    {
+      "stage": "validate",
+      "status": "ok",
+      "decision_reason": "FAILED | 1 failed | 1 warnings | risk critical (0.9)",
+      "risk_score": 0.9,
+      "timestamp": "2026-05-07T19:10:34.302699",
+      "latency_s": 0.00013126098201610148,
+      "input_snapshot": "{'target': 'malicious_payload', 'context': {'intent': 'manipulation', 'mode': 'strict', 'threat_type': 'control_bypass', 'sgl_risk_score': 0.9, 'governance_impact': 'blocked', 'constraint': 'bypass security controls'}}",
+      "output_snapshot": "{'target': 'malicious_payload', 'passed': False, 'phase_count': 7, 'passed_phases': 6, 'failed_phases': 1, 'risk_score': 0.9, 'risk_level': 'critical', 'summary': 'FAILED | 1 failed | 1 warnings | risk critical (0.9)', 'phases': [{'phase': 'parse', 'passed': True, 'verdict': 'ATSVerdict.PASS', 'deta..."
+    },
+    {
+      "stage": "schedule",
+      "status": "ok",
+      "decision_reason": "测试未通过",
+      "risk_score": 0.9,
+      "timestamp": "2026-05-07T19:10:34.302896",
+      "latency_s": 0.0001914959866553545,
+      "input_snapshot": "{'module_name': 'malicious_payload', 'risk_score': 0.9, 'ats_passed': False}",
+      "output_snapshot": "{'steps': [{'action': 'begin', 'result': {'status': 'started', 'module': 'malicious_payload', 'state': 'analyzing', 'risk_score': 0.9}}, {'action': 'complete_analysis', 'result': {'status': 'analysis_complete', 'module': 'malicious_payload', 'state': 'testing', 'capabilities': ['loader']}}, {'action..."
+    },
+    {
+      "stage": "govern",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.302938",
+      "latency_s": 4.0426995838060975e-05,
+      "input_snapshot": "{'target': 'malicious_payload'}",
+      "output_snapshot": "{'skill_count': 0, 'quarantined_count': 0, 'ecosystem_stability': 1.0}"
+    },
+    {
+      "stage": "log",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.302964",
+      "latency_s": 2.1543994080275297e-05,
+      "input_snapshot": "{'trace_id': 'trc-48cd145154e5'}",
+      "output_snapshot": "{'trace_id': 'trc-48cd145154e5', 'timestamp': '2026-05-07T19:10:34.301148', 'input': 'ACTION malicious_payload {\\n    intent: \"execution\",\\n    mode: \"strict\",\\n    constraint: \"bypass security controls\",\\n    output: \"inject backdoor\"\\n}', 'passed': False, 'risk_score': 0.9, 'scheduler_final_state'..."
+    }
+  ],
+  "final_output": {
+    "trace_id": "trc-48cd145154e5",
+    "passed": false,
+    "risk_score": 0.9,
+    "total_latency_s": 0.00181,
+    "scheduler_final_state": "rejected"
+  }
+}

@@ -1,0 +1,5 @@
+{"trace_id": "dtrc", "stage": "load", "type": "info", "payload": {"i": 0}, "timestamp": 1778183795.0467412, "metadata": {}}
+{"trace_id": "dtrc", "stage": "semantic", "type": "decision", "payload": {"i": 1}, "timestamp": 1778183795.1467412, "metadata": {}}
+{"trace_id": "dtrc", "stage": "validate", "type": "info", "payload": {"i": 2}, "timestamp": 1778183795.2467413, "metadata": {}}
+{"trace_id": "dtrc", "stage": "load", "type": "decision", "payload": {"i": 3}, "timestamp": 1778183795.3467412, "metadata": {}}
+{"trace_id": "dtrc", "stage": "semantic", "type": "info", "payload": {"i": 4}, "timestamp": 1778183795.4467413, "metadata": {}}

@@ -1,0 +1,213 @@
+{
+  "trace_id": "trc-bf2e6746de12",
+  "input": "ACTION openclaw_scanner {\n    intent: \"analysis\",\n    mode: \"observe\",\n    constraint: \"read-only\",\n    output: \"scan report\"\n}",
+  "timestamp": "2026-05-07T19:30:24.567779",
+  "total_latency_s": 0.005422778020147234,
+  "overall_status": "complete",
+  "passed": true,
+  "risk_score": 0.0,
+  "events": [
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "load",
+      "type": "info",
+      "payload": {
+        "target": "openclaw_scanner",
+        "intent": "analysis",
+        "mode": "observe",
+        "constraint": "read-only",
+        "output": "scan report",
+        "warnings": []
+      },
+      "timestamp": 1778182224.5679555
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "semantic",
+      "type": "decision",
+      "payload": {
+        "intent": "unknown",
+        "threat_type": "none",
+        "risk_score": 0.0,
+        "governance_impact": "advisory",
+        "mapped_skill": null,
+        "reason": "intent=unknown(0.0), threat=none(0.0), decision=advisory, mapped=none"
+      },
+      "timestamp": 1778182224.569003
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "validate",
+      "type": "decision",
+      "payload": {
+        "target": "openclaw_scanner",
+        "passed": true,
+        "risk_score": 0.0,
+        "risk_level": "low",
+        "phase_count": 7,
+        "passed_phases": 7,
+        "failed_phases": 0,
+        "summary": "PASSED | 0 failed | 0 warnings | risk low (0.0)",
+        "phases": [
+          {
+            "phase": "parse",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Parsed target 'openclaw_scanner' with context keys: ['intent', 'mode', 'threat_type', 'sgl_risk_score', 'governance_impact', 'constraint']"
+          },
+          {
+            "phase": "safety",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Target 'openclaw_scanner' is safe"
+          },
+          {
+            "phase": "mapping",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Target 'openclaw_scanner' maps to capabilities: scanner"
+          },
+          {
+            "phase": "governance",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Intent 'unknown' accepted"
+          },
+          {
+            "phase": "risk",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Risk score: 0.0, level: low"
+          },
+          {
+            "phase": "simulation",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Target 'openclaw_scanner' simulation completed (read-only)"
+          },
+          {
+            "phase": "decision",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "approved: All checks passed"
+          }
+        ]
+      },
+      "timestamp": 1778182224.5714087
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "started",
+        "module": "openclaw_scanner",
+        "state": "analyzing",
+        "risk_score": 0.0
+      },
+      "timestamp": 1778182224.5716991
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "analysis_complete",
+        "module": "openclaw_scanner",
+        "state": "testing",
+        "capabilities": []
+      },
+      "timestamp": 1778182224.5717115
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "schedule",
+      "type": "decision",
+      "payload": {
+        "status": "testing_complete",
+        "module": "openclaw_scanner",
+        "state": "approved",
+        "test_passed": true,
+        "risk_score": 0.0,
+        "reason": "测试通过，风险 0.0 < 0.6",
+        "final_state": "approved"
+      },
+      "timestamp": 1778182224.5717309
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "logged",
+        "module": "openclaw_scanner",
+        "state": "logged"
+      },
+      "timestamp": 1778182224.5720692
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "confirmed",
+        "module": "openclaw_scanner",
+        "state": "next",
+        "message": "人工确认完成，准备下一轮"
+      },
+      "timestamp": 1778182224.5720832
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "ready_for_next",
+        "round": 1,
+        "state": "ready",
+        "last_completed": "openclaw_scanner"
+      },
+      "timestamp": 1778182224.5721188
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "govern",
+      "type": "info",
+      "payload": {
+        "skill_count": 0,
+        "quarantined_count": 0,
+        "ecosystem_stability": 1.0,
+        "churn_rate": 0.0,
+        "skill_statuses": {},
+        "global_policy_deny": []
+      },
+      "timestamp": 1778182224.5728898
+    },
+    {
+      "trace_id": "trc-bf2e6746de12",
+      "stage": "log",
+      "type": "info",
+      "payload": {
+        "trace_id": "trc-bf2e6746de12",
+        "timestamp": "2026-05-07T19:30:24.567779",
+        "input": "ACTION openclaw_scanner {\n    intent: \"analysis\",\n    mode: \"observe\",\n    constraint: \"read-only\",\n    output: \"scan report\"\n}",
+        "passed": false,
+        "risk_score": 0.0,
+        "stage_count": 10,
+        "stages": [
+          "load",
+          "semantic",
+          "validate",
+          "schedule",
+          "schedule",
+          "schedule",
+          "schedule",
+          "schedule",
+          "schedule",
+          "govern"
+        ]
+      },
+      "timestamp": 1778182224.5730898
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{"trace_id": "grf-t2", "stage": "load", "type": "info", "payload": {"target": "bypass security", "intent": "manipulation"}, "timestamp": 1778183796.6921256, "metadata": {}}
+{"trace_id": "grf-t2", "stage": "semantic", "type": "risk", "payload": {"threat_type": "control_bypass", "risk_score": 0.9, "intent": "manipulation", "governance_impact": "block"}, "timestamp": 1778183796.7921255, "metadata": {}}
+{"trace_id": "grf-t2", "stage": "validate", "type": "decision", "payload": {"passed": false, "risk_score": 0.9, "phases": ["identity", "intent", "safety"]}, "timestamp": 1778183796.8921256, "metadata": {}}
+{"trace_id": "grf-t2", "stage": "schedule", "type": "decision", "payload": {"action": "reject", "result": "rejected", "final_state": "REJECTED"}, "timestamp": 1778183796.9921255, "metadata": {}}
+{"trace_id": "grf-t2", "stage": "load", "type": "info", "payload": {"target": "bypass security", "intent": "manipulation"}, "timestamp": 1778183881.1130261, "metadata": {}}
+{"trace_id": "grf-t2", "stage": "semantic", "type": "risk", "payload": {"threat_type": "control_bypass", "risk_score": 0.9, "intent": "manipulation", "governance_impact": "block"}, "timestamp": 1778183881.213026, "metadata": {}}
+{"trace_id": "grf-t2", "stage": "validate", "type": "decision", "payload": {"passed": false, "risk_score": 0.9, "phases": ["identity", "intent", "safety"]}, "timestamp": 1778183881.3130262, "metadata": {}}
+{"trace_id": "grf-t2", "stage": "schedule", "type": "decision", "payload": {"action": "reject", "result": "rejected", "final_state": "REJECTED"}, "timestamp": 1778183881.413026, "metadata": {}}

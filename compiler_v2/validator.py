@@ -9,7 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from compiler_v2.capability_ir import DXB
+from typing import Any
+
+from compiler_v2.capability_ir import CapabilityIR, DXB
 
 
 @dataclass
@@ -69,11 +71,12 @@ class DXBValidator:
         "live_check", "dynamic_dispatch", "real_time",
     }
 
-    def validate(self, dxb: DXB) -> ValidationReport:
+    def validate(self, dxb: DXB, ir: CapabilityIR | None = None) -> ValidationReport:
         """验证 DXB 的正确性和安全性。
 
         Args:
             dxb: 待验证的 DXB
+            ir: 可选的 CapabilityIR，用于 IR-DXB 对齐检查
 
         Returns:
             ValidationReport: 验证报告 (只读操作，不修改 dxb)
@@ -94,6 +97,10 @@ class DXBValidator:
         # ── Policy checks ──
         self._check_governance_coverage(dxb, report)
         self._check_risk_thresholds(dxb, report)
+
+        # ── Integrity checks (对抗性加固) ──
+        self._check_risk_drop_integrity(dxb, ir, report)
+        self._check_ir_dxb_alignment(dxb, ir, report)
 
         return report
 
@@ -164,7 +171,7 @@ class DXBValidator:
     def _check_step_cardinality(self, dxb: DXB, report: ValidationReport) -> None:
         """检查步骤数量合理性。"""
         if not dxb.steps:
-            report.add_warning("DXB has no steps — empty execution blueprint")
+            report.add_error("DXB has no steps — empty execution blueprint is not executable")
         elif dxb.step_count > 1000:
             report.add_warning(f"DXB has {dxb.step_count} steps — consider optimization")
 
@@ -272,3 +279,72 @@ class DXBValidator:
         # Check overall DXB risk
         if dxb.risk_score >= 0.8:
             report.add_risk_flag(f"DXB overall risk score is high: {dxb.risk_score}")
+
+    # ═══════════════════════════════════════════════════════════════
+    # Integrity checks (对抗性加固)
+    # ═══════════════════════════════════════════════════════════════
+
+    def _check_risk_drop_integrity(self, dxb: DXB, ir: CapabilityIR | None, report: ValidationReport) -> None:
+        """验证 DXB 步骤风险与 IR 风险信号一致 — 阻止 risk 被静默归零。
+
+        检查条件:
+        - IR 有高风险 signal (>=0.8) 但没有任何步骤 risk >= 0.7 → risk drop
+        - IR 有 risk_signals 但 DXB steps 全部 risk=0.0 → 可能的风险丢失
+        """
+        if ir is None:
+            return
+
+        has_risk_signals = bool(ir.risk_signals)
+        if not has_risk_signals:
+            return
+
+        high_ir_risk = any(v >= 0.8 for v in ir.risk_signals.values())
+        if not high_ir_risk:
+            return
+
+        # 检查是否任何步骤继承了风险
+        has_step_risk = any(s.risk >= 0.7 for s in dxb.steps)
+        if not has_step_risk:
+            report.add_error(
+                f"RISK DROP DETECTED: IR has risk_signals={dict(ir.risk_signals)} "
+                "but no DXB step has risk >= 0.7. Risk information was lost "
+                "during DXB construction — possible silent risk degradation."
+            )
+
+    def _check_ir_dxb_alignment(self, dxb: DXB, ir: CapabilityIR | None, report: ValidationReport) -> None:
+        """验证 IR 能力节点与 DXB 步骤之间的对齐。
+
+        检查条件:
+        - IR 有节点但 DXB 0 步骤 → 能力完全丢失
+        - IR 节点类型在 DXB 中被完全丢弃（除 MEMORY 外）
+        """
+        if ir is None:
+            return
+
+        ir_count = ir.capability_count()
+        dxb_count = dxb.step_count
+
+        if ir_count > 0 and dxb_count == 0:
+            report.add_error(
+                f"IR-DXB ALIGNMENT FAILURE: CapabilityIR has {ir_count} nodes "
+                f"but DXB has 0 steps. All capability nodes were lost "
+                "during DXB construction."
+            )
+        elif ir_count > 0 and dxb_count > 0:
+            # 检查是否有特定类型的节点被完全丢弃
+            node_types_in_ir: dict[str, int] = {}
+            for node in ir.capabilities:
+                node_types_in_ir[node.node_type] = node_types_in_ir.get(node.node_type, 0) + 1
+
+            step_types_in_dxb: dict[str, int] = {}
+            for step in dxb.steps:
+                step_types_in_dxb[step.step_type] = step_types_in_dxb.get(step.step_type, 0) + 1
+
+            # MEMORY 节点不生成步骤是已知设计行为，不报警
+            skipped_types = {"MEMORY"}
+            for ntype, count in node_types_in_ir.items():
+                if ntype not in skipped_types and ntype not in step_types_in_dxb:
+                    report.add_warning(
+                        f"IR-DXB TYPE DROP: {count} IR nodes of type '{ntype}' "
+                        f"produced 0 DXB steps"
+                    )

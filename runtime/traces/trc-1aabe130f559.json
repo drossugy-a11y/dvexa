@@ -1,0 +1,213 @@
+{
+  "trace_id": "trc-1aabe130f559",
+  "input": "ACTION malicious_payload {\n    intent: \"execution\",\n    mode: \"strict\",\n    constraint: \"bypass security controls\",\n    output: \"inject backdoor\"\n}",
+  "timestamp": "2026-05-07T19:30:24.591385",
+  "total_latency_s": 0.002790013008052483,
+  "overall_status": "complete",
+  "passed": true,
+  "risk_score": 0.0,
+  "events": [
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "load",
+      "type": "info",
+      "payload": {
+        "target": "malicious_payload",
+        "intent": "execution",
+        "mode": "strict",
+        "constraint": "bypass security controls",
+        "output": "inject backdoor",
+        "warnings": []
+      },
+      "timestamp": 1778182224.591476
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "semantic",
+      "type": "decision",
+      "payload": {
+        "intent": "unknown",
+        "threat_type": "none",
+        "risk_score": 0.0,
+        "governance_impact": "advisory",
+        "mapped_skill": null,
+        "reason": "intent=unknown(0.0), threat=none(0.0), decision=advisory, mapped=none"
+      },
+      "timestamp": 1778182224.591853
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "validate",
+      "type": "decision",
+      "payload": {
+        "target": "malicious_payload",
+        "passed": true,
+        "risk_score": 0.0,
+        "risk_level": "low",
+        "phase_count": 7,
+        "passed_phases": 7,
+        "failed_phases": 0,
+        "summary": "PASSED | 0 failed | 0 warnings | risk low (0.0)",
+        "phases": [
+          {
+            "phase": "parse",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Parsed target 'malicious_payload' with context keys: ['intent', 'mode', 'threat_type', 'sgl_risk_score', 'governance_impact', 'constraint']"
+          },
+          {
+            "phase": "safety",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Target 'malicious_payload' is safe"
+          },
+          {
+            "phase": "mapping",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Target 'malicious_payload' maps to capabilities: loader"
+          },
+          {
+            "phase": "governance",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Intent 'unknown' accepted"
+          },
+          {
+            "phase": "risk",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Risk score: 0.0, level: low"
+          },
+          {
+            "phase": "simulation",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "Target 'malicious_payload' simulation completed (read-only)"
+          },
+          {
+            "phase": "decision",
+            "passed": true,
+            "verdict": "ATSVerdict.PASS",
+            "details": "approved: All checks passed"
+          }
+        ]
+      },
+      "timestamp": 1778182224.592313
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "started",
+        "module": "malicious_payload",
+        "state": "analyzing",
+        "risk_score": 0.0
+      },
+      "timestamp": 1778182224.592589
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "analysis_complete",
+        "module": "malicious_payload",
+        "state": "testing",
+        "capabilities": []
+      },
+      "timestamp": 1778182224.5925987
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "schedule",
+      "type": "decision",
+      "payload": {
+        "status": "testing_complete",
+        "module": "malicious_payload",
+        "state": "approved",
+        "test_passed": true,
+        "risk_score": 0.0,
+        "reason": "测试通过，风险 0.0 < 0.6",
+        "final_state": "approved"
+      },
+      "timestamp": 1778182224.5926187
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "logged",
+        "module": "malicious_payload",
+        "state": "logged"
+      },
+      "timestamp": 1778182224.5928082
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "confirmed",
+        "module": "malicious_payload",
+        "state": "next",
+        "message": "人工确认完成，准备下一轮"
+      },
+      "timestamp": 1778182224.5928159
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "schedule",
+      "type": "info",
+      "payload": {
+        "status": "ready_for_next",
+        "round": 1,
+        "state": "ready",
+        "last_completed": "malicious_payload"
+      },
+      "timestamp": 1778182224.592842
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "govern",
+      "type": "info",
+      "payload": {
+        "skill_count": 0,
+        "quarantined_count": 0,
+        "ecosystem_stability": 1.0,
+        "churn_rate": 0.0,
+        "skill_statuses": {},
+        "global_policy_deny": []
+      },
+      "timestamp": 1778182224.5939162
+    },
+    {
+      "trace_id": "trc-1aabe130f559",
+      "stage": "log",
+      "type": "info",
+      "payload": {
+        "trace_id": "trc-1aabe130f559",
+        "timestamp": "2026-05-07T19:30:24.591385",
+        "input": "ACTION malicious_payload {\n    intent: \"execution\",\n    mode: \"strict\",\n    constraint: \"bypass security controls\",\n    output: \"inject backdoor\"\n}",
+        "passed": false,
+        "risk_score": 0.0,
+        "stage_count": 10,
+        "stages": [
+          "load",
+          "semantic",
+          "validate",
+          "schedule",
+          "schedule",
+          "schedule",
+          "schedule",
+          "schedule",
+          "schedule",
+          "govern"
+        ]
+      },
+      "timestamp": 1778182224.5940795
+    }
+  ]
+}

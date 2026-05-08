@@ -1,0 +1,12 @@
+{"trace_id": "grf-t1", "stage": "load", "type": "info", "payload": {"target": "analyze system", "intent": "analysis"}, "timestamp": 1778183795.6921256, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "semantic", "type": "decision", "payload": {"intent": "analysis", "risk_score": 0.05, "threat_type": "none"}, "timestamp": 1778183795.7921255, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "validate", "type": "decision", "payload": {"passed": true, "risk_score": 0.05, "phases": ["identity", "intent", "safety"]}, "timestamp": 1778183795.8921256, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "schedule", "type": "decision", "payload": {"action": "approve", "result": "approved", "final_state": "APPROVED"}, "timestamp": 1778183795.9921255, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "govern", "type": "info", "payload": {"skill_count": 5, "stability": 0.95}, "timestamp": 1778183796.0921257, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "log", "type": "info", "payload": {"message": "execution complete"}, "timestamp": 1778183796.1921256, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "load", "type": "info", "payload": {"target": "analyze system", "intent": "analysis"}, "timestamp": 1778183880.1130261, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "semantic", "type": "decision", "payload": {"intent": "analysis", "risk_score": 0.05, "threat_type": "none"}, "timestamp": 1778183880.213026, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "validate", "type": "decision", "payload": {"passed": true, "risk_score": 0.05, "phases": ["identity", "intent", "safety"]}, "timestamp": 1778183880.3130262, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "schedule", "type": "decision", "payload": {"action": "approve", "result": "approved", "final_state": "APPROVED"}, "timestamp": 1778183880.413026, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "govern", "type": "info", "payload": {"skill_count": 5, "stability": 0.95}, "timestamp": 1778183880.5130262, "metadata": {}}
+{"trace_id": "grf-t1", "stage": "log", "type": "info", "payload": {"message": "execution complete"}, "timestamp": 1778183880.6130261, "metadata": {}}

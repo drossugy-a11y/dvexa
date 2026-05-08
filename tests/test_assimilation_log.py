@@ -1,4 +1,4 @@
-"""Tests for Assimilation Log System (v1.89)"""
+"""吞并日志系统测试（v1.89）"""
 
 import json
 import shutil
@@ -13,7 +13,7 @@ from external.assimilation_log import (
 )
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# ─── 辅助函数 ──────────────────────────────────────────────────────────────────
 
 def _make_entry(**kw) -> AssimilationLogEntry:
     entry = AssimilationLogEntry(
@@ -126,10 +126,10 @@ class TestAssimilationLoggerBasic:
 
     def test_save_log_returns_filename(self):
         t = _TempLogger()
-        entry = _make_entry(source_project="My Project")
+        entry = _make_entry()
         fname = t.logger.save_log(entry)
+        assert fname.startswith("TB")
         assert fname.endswith(".json")
-        assert "my_project" in fname
         t.cleanup()
 
     def test_list_all_empty(self):
@@ -147,22 +147,27 @@ class TestAssimilationLoggerBasic:
 
     def test_load_nonexistent(self):
         t = _TempLogger()
-        assert t.logger.load_log("nonexistent.json") is None
+        assert t.logger.load_log("TB999.json") is None
         t.cleanup()
 
     def test_load_corrupted_file(self):
         t = _TempLogger()
-        bad_file = Path(t._tmpdir) / "bad.json"
+        bad_file = Path(t._tmpdir) / "TB1.json"
         bad_file.write_text("not json", encoding="utf-8")
-        loaded = t.logger.load_log("bad.json")
+        loaded = t.logger.load_log("TB1.json")
         assert loaded is None
         t.cleanup()
 
-    def test_multiple_saves_same_project(self):
+    def test_multiple_saves_sequential_numbering(self):
+        """多次保存应生成 TB1, TB2, TB3..."""
         t = _TempLogger()
-        t.logger.save_log(_make_entry(source_project="proj", decision="pending"))
-        t.logger.save_log(_make_entry(source_project="proj", decision="approved"))
-        assert len(t.logger.list_all()) == 2
+        f1 = t.logger.save_log(_make_entry(source_project="proj", decision="pending"))
+        f2 = t.logger.save_log(_make_entry(source_project="proj", decision="approved"))
+        f3 = t.logger.save_log(_make_entry(source_project="proj2"))
+        assert f1 == "TB1.json"
+        assert f2 == "TB2.json"
+        assert f3 == "TB3.json"
+        assert len(t.logger.list_all()) == 3
         t.cleanup()
 
     def test_log_dir_created(self):
@@ -176,41 +181,52 @@ class TestAssimilationLoggerBasic:
 
 # ─── AssimilationLogger — 文件名 ──────────────────────────────────────────────
 
-class TestFilenameSanitize:
-    def test_sanitize_normal(self):
+class TestFilenameNumbering:
+    def test_json_filename_is_tb_format(self):
         t = _TempLogger()
-        entry = _make_entry(source_project="hello-world")
+        entry = _make_entry()
         fname = t.logger.save_log(entry)
-        assert "hello-world" in fname
+        assert fname == "TB1.json"
         t.cleanup()
 
-    def test_sanitize_special_chars(self):
+    def test_md_filename_is_tb_format(self):
         t = _TempLogger()
-        entry = _make_entry(source_project="hello/world:test")
-        fname = t.logger.save_log(entry)
-        assert "/" not in fname
-        assert "hello_world_test" in fname
+        entry = _make_entry()
+        path = t.logger.save_log_markdown(entry)
+        assert Path(path).name == "TB1.md"
         t.cleanup()
 
-    def test_sanitize_path_traversal(self):
+    def test_json_and_md_shared_numbering(self):
+        """JSON 和 MD 共享序号序列。"""
         t = _TempLogger()
-        entry = _make_entry(source_project="../etc/passwd")
+        t.logger.save_log(_make_entry())           # TB1.json
+        t.logger.save_log_markdown(_make_entry())  # TB2.md
+        t.logger.save_log(_make_entry())           # TB3.json
+        t.logger.save_log_markdown(_make_entry())  # TB4.md
+        files = sorted(Path(t._tmpdir).glob("TB*"))
+        names = [f.name for f in files]
+        assert "TB1.json" in names
+        assert "TB3.json" in names
+        assert "TB2.md" in names
+        assert "TB4.md" in names
+        assert len(names) == 4
+        t.cleanup()
+
+    def test_no_path_traversal_in_filename(self):
+        """TB 序号命名天然免疫路径穿越。"""
+        t = _TempLogger()
+        entry = _make_entry(source_project="../../etc/passwd")
         fname = t.logger.save_log(entry)
         assert ".." not in fname
+        assert fname == "TB1.json"
         t.cleanup()
 
-    def test_filename_date_prefix(self):
+    def test_filename_not_affected_by_project_name(self):
+        """项目名不进入文件名，由 TB 序号替代。"""
         t = _TempLogger()
-        entry = _make_entry(analysis_time="2026-05-07 14:30:00")
+        entry = _make_entry(source_project="any_project_name")
         fname = t.logger.save_log(entry)
-        assert fname.startswith("20260507_")
-        t.cleanup()
-
-    def test_filename_empty_project(self):
-        t = _TempLogger()
-        entry = _make_entry(source_project="")
-        fname = t.logger.save_log(entry)
-        assert "unknown" in fname
+        assert fname == "TB1.json"
         t.cleanup()
 
 
@@ -333,12 +349,12 @@ class TestMarkdownExport:
         entry = _make_entry()
         path = t.logger.save_log_markdown(entry)
         content = Path(path).read_text(encoding="utf-8")
-        assert "Assimilation Report" in content
-        assert "Source" in content
-        assert "Observed Architecture" in content
-        assert "Candidate Capabilities" in content
-        assert "Rejected Capabilities" in content
-        assert "Assimilation Decision" in content
+        assert "吞并分析报告" in content
+        assert "来源信息" in content
+        assert "观察到的架构" in content
+        assert "候选吞并能力" in content
+        assert "已拒绝的能力" in content
+        assert "吞并决策" in content
         t.cleanup()
 
     def test_markdown_has_yaml_frontmatter(self):
@@ -355,7 +371,7 @@ class TestMarkdownExport:
         entry = _make_entry(future_notes="")
         path = t.logger.save_log_markdown(entry)
         content = Path(path).read_text(encoding="utf-8")
-        assert "Future Notes" not in content
+        assert "后续备注" not in content
         t.cleanup()
 
 
@@ -371,9 +387,9 @@ class TestEdgeCases:
         assert len(entry.rejected_capabilities) == 0
 
     def test_logger_default_dir(self):
-        """LOG_DIR 常量必须在 ZSK/assimilation_logs/。"""
+        """LOG_DIR 常量必须在 ZSK/TBRZ/。"""
         assert "ZSK" in str(LOG_DIR)
-        assert "assimilation_logs" in str(LOG_DIR)
+        assert "TBRZ" in str(LOG_DIR)
 
     def test_json_roundtrip_preserves_all_fields(self):
         t = _TempLogger()

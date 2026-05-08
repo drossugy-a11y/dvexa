@@ -26,6 +26,10 @@ from capabilities.router import CapabilityRouter
 from capabilities.skills.llm_skill import LLMSkill
 from capabilities.skills.code_skill import CodeSkill
 from capabilities.skills.http_skill import HTTPSkill
+from capabilities.skills.github_browser_skill import GitHubBrowserSkill
+from tools.github_cli_tool import GitHubCLITool
+from capabilities.skills.security_skill import SecuritySkill
+from tools.security_scanner_tool import SecurityScannerTool
 
 # ─── Governance Layer (v1.8) ────────────────────────────────────────────────
 from governance.skill_governor import SkillGovernor
@@ -69,6 +73,13 @@ def main():
     router.register_skill("http", HTTPSkill(http_tool),
                           keywords=["网络", "请求", "获取", "下载", "网页", "http", "api", "curl"],
                           description="HTTP 网络请求能力")
+    gh_cli = GitHubCLITool()
+    router.register_skill("github", GitHubBrowserSkill(gh_cli),
+                          keywords=["github", "仓库", "浏览", "readme", "文件树", "代码库", "项目结构", "repo", "模块", "openclaw"],
+                          description="GitHub 仓库浏览能力")
+    router.register_skill("security", SecuritySkill(SecurityScannerTool()),
+                          keywords=["安全", "扫描", "代码审查", "危险", "检测", "审查", "漏洞", "恶意代码", "security"],
+                          description="静态代码安全扫描能力（7 类危险模式）")
 
     tool_registry = router.build_tool_registry()
 

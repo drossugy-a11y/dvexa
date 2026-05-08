@@ -4,42 +4,79 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-DVexa is a **single-kernel AI OS** with strict layered architecture. The core principle: **Kernel retains sole control authority**.
+DVexa is an experimental **agent execution runtime** with a layered architecture. The core design principle: a single control loop retains execution authority while governance modules observe and score without modifying control flow.
 
-### Frozen vs Growth Layers
+### Layer Architecture
 
-**Frozen** (never modify):
+**Core (stable base layer):**
 - `core/kernel.py` — single control loop
 - `core/executor.py` — plan → execute → result
-- `core/guard.py` — CBF sanitization (strips confidence/score/risk from execution results)
-- `agents/base_agent.py` — LLM interaction
+- `core/guard.py` — Control Boundary Filter (strips non-control signals from execution results)
+- `agents/base_agent.py` — LLM-based task planner
 
-**Growth** (only these can be modified/extended):
+**Extensible modules:**
+- `runtime/` — Event-Sourced Runtime Engine (orchestration layer)
 - `capabilities/` — SkillRegistry, CapabilityRouter, individual skills
-- `governance/` — Bayesian scoring, lifecycle management, conflict detection
-- `insight/` — System analysis, drift detection, reporting
-- `external/` — External agent sandboxing, capability assimilation (suggest only, never auto-register)
-- `report/` — Post-execution metrics collection, execution report generation
+- `governance/` — Scoring, lifecycle management, conflict detection, policy enforcement
+- `evaluation/` — Execution proof generation, capability scoring, evolution tracking
+- `insight/` — System analysis, drift detection
+- `external/` — External agent sandboxing, capability analysis
+- `report/` — Post-execution metrics collection
+- `tools/` — Tool base classes (LLM, HTTP, Code, MCP)
 
-### Control Flow
+### Event-Sourced Runtime
+
+The runtime uses an Event-Sourced architecture — all execution output is stored as Events in an append-only EventStore:
 
 ```
-Kernel → CBF → Executor/Planner → Capability Router → Skill
-            ↑                        ↓
-         (sanitized)          Governance/SkillScore
-
-Insight Agent  ──→  Analyzer → DriftDetector → ReportGenerator  (pure observation)
-Report Layer   ──→  MetricsCollector → ExecutionReport → Formatter  (post-hoc, no hooks)
-External       ──→  Adapter → Sandbox → Assimilator  (suggest only, no auto-register)
+input → DVXRuntimeEngine.run()
+         │
+         ▼  Event × N
+         │
+    EventStore.append() → JSONL persistence
+         │
+         ▼
+    RuntimeContext (input + events[] + metadata)
+         │
+         ▼  Computed properties from event projection
+    ctx.passed, ctx.risk_score, etc.
 ```
 
-### Key Rules
+**Key constraints:**
+- `Event` is the only persistence structure
+- `EventStore` is append-only — single source of truth
+- Governance modules output `Event` via transformer methods
+- `DVXReplayEngine` reads entirely from EventStore
 
-- **Observation ≠ modification**: External adapters, Insight, and Report layers can observe but never modify governance/router/skill scores
-- **External agents**: Always sandboxed (process + data isolation), never enter kernel control flow
-- **CBF sanitization**: All data from executor to kernel passes through CBF which strips confidence/score/risk/validation/suggestion
-- **Bayesian scoring**: `bayesian_success_rate = (successes + 8) / (usage + 10)` — prevents single failure from collapsing score
-- **Lifecycle**: EXPERIMENTAL → ACTIVE → STABLE → DEGRADED → QUARANTINED → RECOVERED → ACTIVE (REMOVED is manual only, never automatic)
+### Execution Flow
+
+```
+                            DVX Runtime Engine
+                            ===================
+input → DVXRuntimeEngine.run()
+         │
+    ┌── Stage 1: LOAD ────── Event
+    ├── Stage 2: SEMANTIC ─── Event (governance intent/threat detection)
+    ├── Stage 3: VALIDATE ─── Event (behavioral testing)
+    ├── Stage 4: SCHEDULE ─── Event list (state machine gating)
+    ├── Stage 5: GOVERN ───── Event (governance snapshot)
+    └── Stage 6: LOG ──────── Event → EventStore
+         │
+         ▼
+    RuntimeContext (events + metadata)
+         │
+         ├── ExecutionTrace (event-based query)
+         └── ReplayEngine (EventStore replay + diff)
+```
+
+### Governance Module Event Pattern
+
+| Module | Role | Event Method |
+|--------|------|-------------|
+| DVXLoader | Parse `ACTION { ... }` input | `parse() → Event` |
+| SemanticGovernanceLayer | Intent + threat detection | `analyze_event(event) → Event` |
+| AssimilationTestSystem | 7-stage behavioral validation | `run_event(event) → Event` |
+| AssimilationScheduler | State machine risk gating | `process_event(event) → list[Event]` |
 
 ## Commands
 
@@ -50,14 +87,24 @@ python3 -m pytest tests/ -q
 # Run single test file
 python3 -m pytest tests/test_governance.py -v
 
-# Run single test
-python3 -m pytest tests/test_governance.py::TestSkillScore::test_default_values -v
-
 # Run with coverage
 python3 -m pytest tests/ --cov=. --cov-report=term
 
-# Start the server
+# Run Evaluation demo (pre-recorded demo data)
+python3 -m evaluation.demo
+
+# Run Evaluation demo with live LLM
+python3 -m evaluation.demo --live
+
+# Save evaluation report to file
+python3 -m evaluation.demo --output report.json --format json
+
+# Start API server
 python3 main.py
+
+# Run integration tests
+python3 scripts/test_runtime_engine.py
+python3 scripts/integration_test_v1.py
 
 # Install dependencies
 pip install -r requirements.txt
@@ -67,27 +114,26 @@ pip install -r requirements.txt
 
 | Directory | Purpose |
 |-----------|---------|
-| `core/` | Frozen: Kernel, Executor, CBF Guard, Scheduler, TaskState |
-| `agents/` | Frozen: BaseAgent (LLM planner) |
-| `capabilities/` | Skill definitions, Registry, Router |
-| `governance/` | Bayesian SkillScore, Lifecycle, ConflictDetector, SkillGovernor |
-| `insight/` | SystemAnalyzer, DriftDetector, ReportGenerator |
-| `external/` | External agent Protocol, Sandbox, Registry, Assimilator |
-| `report/` | MetricsCollector, ExecutionReport, ReportFormatter |
-| `memory/` | MemoryStore (in-memory task store) |
-| `tools/` | Tool base classes: LLM, HTTP, Code, MCP |
-| `config/` | Config loading from .env |
+| `core/` | Control loop, executor, CBF guard, scheduler |
+| `agents/` | LLM-based task planner (BaseAgent) |
+| `runtime/` | Event-Sourced Runtime Engine |
+| `capabilities/` | Skill definitions, registry, router |
+| `governance/` | Governance modules (SGL, ATS, Scheduler, lifecycle, scoring) |
+| `evaluation/` | Execution proof, capability scoring, evolution tracking |
+| `insight/` | System analysis, drift detection |
+| `external/` | External agent sandboxing, assimilation analysis |
+| `report/` | Metrics collection, report formatting |
+| `memory/` | In-memory task store |
+| `tools/` | Tool base classes (LLM, HTTP, Code, MCP, security scanner) |
+| `config/` | Configuration from .env |
 | `api/` | FastAPI server |
-| `tests/` | pytest test files |
-| `ZSK/` | Knowledge base: SPEC.md (format spec), behavior snapshots |
-| `ZSK/BBGX/` | Version milestones (ZT1-ZT8+), one per release |
-| `ZSK/TBRZ/` | Merger/assimilation daily logs |
-| `ZSK/assimilation_logs/` | External project analysis logs (auto-generated by AssimilationLogger) |
+| `scripts/` | Integration tests, utility scripts |
+| `tests/` | Pytest test suite |
+| `compiler_v2/` | Experimental DXB compiler (capability IR → execution blueprint) |
 
 ## Test Conventions
 
 - Tests use `pytest` with plain `assert` (no unittest)
 - Organize by feature class: `class TestFeature:` with `def test_behavior(self):`
-- Test helpers defined as module-level classes (e.g., `_SimpleHandler`, `_OkAdapter`)
-- New features require tests; target >160 total tests (currently 229)
-- Frozen layer files must never appear in git diff after changes
+- Test helpers defined as module-level classes
+- New features require accompanying tests

@@ -1,0 +1,2 @@
+{"trace_id": "tb", "stage": "load", "type": "info", "payload": {}, "timestamp": 1778183794.9167721, "metadata": {}}
+{"trace_id": "tb", "stage": "semantic", "type": "decision", "payload": {}, "timestamp": 1778183795.016772, "metadata": {}}

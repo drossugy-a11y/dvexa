@@ -1,0 +1,218 @@
+{
+  "trace_id": "trc-6bf1d43dfc21",
+  "input": "ACTION plugin_manager {\n    intent: \"execution\",\n    mode: \"simulate\",\n    constraint: \"write access needed for plugin_manager + tool_policy + loader\",\n    output: \"multi-module integration report\"\n}",
+  "timestamp": "2026-05-07T19:10:34.305112",
+  "total_latency_s": 0.0004480250063352287,
+  "overall_status": "complete",
+  "passed": true,
+  "risk_score": 0.05,
+  "dvx_action": {
+    "target": "plugin_manager",
+    "intent": "execution",
+    "mode": "simulate",
+    "constraint": "write access needed for plugin_manager + tool_policy + loader",
+    "output": "multi-module integration report",
+    "warnings": []
+  },
+  "sgl_result": {
+    "intent": "execution",
+    "threat_type": "none",
+    "risk_score": 0.0,
+    "governance_impact": "advisory",
+    "mapped_skill": null,
+    "reason": "intent=execution(0.9), threat=none(0.0), decision=advisory, mapped=none"
+  },
+  "ats_result": {
+    "target": "plugin_manager",
+    "passed": true,
+    "phase_count": 7,
+    "passed_phases": 7,
+    "failed_phases": 0,
+    "risk_score": 0.05,
+    "risk_level": "low",
+    "summary": "PASSED | 0 failed | 2 warnings | risk low (0.05)",
+    "phases": [
+      {
+        "phase": "parse",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Parsed target 'plugin_manager' with context keys: ['intent', 'mode', 'threat_type', 'sgl_risk_score', 'governance_impact', 'constraint']"
+      },
+      {
+        "phase": "safety",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Target 'plugin_manager' is safe"
+      },
+      {
+        "phase": "mapping",
+        "passed": true,
+        "verdict": "ATSVerdict.WARN",
+        "details": "Target 'plugin_manager' does not match any known capability type"
+      },
+      {
+        "phase": "governance",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Intent 'execution' accepted"
+      },
+      {
+        "phase": "risk",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "Risk score: 0.05, level: low"
+      },
+      {
+        "phase": "simulation",
+        "passed": true,
+        "verdict": "ATSVerdict.WARN",
+        "details": "Target 'plugin_manager' requests write access"
+      },
+      {
+        "phase": "decision",
+        "passed": true,
+        "verdict": "ATSVerdict.PASS",
+        "details": "approved: All checks passed"
+      }
+    ]
+  },
+  "scheduler_decision": {
+    "steps": [
+      {
+        "action": "begin",
+        "result": {
+          "status": "started",
+          "module": "plugin_manager",
+          "state": "analyzing",
+          "risk_score": 0.05
+        }
+      },
+      {
+        "action": "complete_analysis",
+        "result": {
+          "status": "analysis_complete",
+          "module": "plugin_manager",
+          "state": "testing",
+          "capabilities": []
+        }
+      },
+      {
+        "action": "complete_testing",
+        "result": {
+          "status": "testing_complete",
+          "module": "plugin_manager",
+          "state": "approved",
+          "test_passed": true,
+          "risk_score": 0.05,
+          "reason": "测试通过，风险 0.05 < 0.6"
+        }
+      },
+      {
+        "action": "log",
+        "result": {
+          "status": "logged",
+          "module": "plugin_manager",
+          "state": "logged"
+        }
+      },
+      {
+        "action": "confirm_human",
+        "result": {
+          "status": "confirmed",
+          "module": "plugin_manager",
+          "state": "next",
+          "message": "人工确认完成，准备下一轮"
+        }
+      },
+      {
+        "action": "next_round",
+        "result": {
+          "status": "ready_for_next",
+          "round": 1,
+          "state": "ready",
+          "last_completed": "plugin_manager"
+        }
+      }
+    ],
+    "final_state": "ready",
+    "error": null,
+    "risk_score": 0.05
+  },
+  "governance_snapshot": {
+    "skill_count": 0,
+    "quarantined_count": 0,
+    "ecosystem_stability": 1.0,
+    "churn_rate": 0.0,
+    "skill_statuses": {},
+    "global_policy_deny": []
+  },
+  "execution_trace": [
+    {
+      "stage": "load",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.305151",
+      "latency_s": 2.8023991035297513e-05,
+      "input_snapshot": "ACTION plugin_manager {\n    intent: \"execution\",\n    mode: \"simulate\",\n    constraint: \"write access needed for plugin_manager + tool_policy + loader\",\n    output: \"multi-module integration report\"\n}",
+      "output_snapshot": "{'target': 'plugin_manager', 'intent': 'execution', 'mode': 'simulate', 'constraint': 'write access needed for plugin_manager + tool_policy + loader', 'output': 'multi-module integration report', 'warnings': []}"
+    },
+    {
+      "stage": "semantic",
+      "status": "ok",
+      "decision_reason": "intent=execution(0.9), threat=none(0.0), decision=advisory, mapped=none",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.305234",
+      "latency_s": 8.024400449357927e-05,
+      "input_snapshot": "ACTION plugin_manager {\n    intent: \"execution\",\n    mode: \"simulate\",\n    constraint: \"write access needed for plugin_manager + tool_policy + loader\",\n    output: \"multi-module integration report\"\n}",
+      "output_snapshot": "{'intent': 'execution', 'threat_type': 'none', 'risk_score': 0.0, 'governance_impact': 'advisory', 'mapped_skill': None, 'reason': 'intent=execution(0.9), threat=none(0.0), decision=advisory, mapped=none'}"
+    },
+    {
+      "stage": "validate",
+      "status": "ok",
+      "decision_reason": "PASSED | 0 failed | 2 warnings | risk low (0.05)",
+      "risk_score": 0.05,
+      "timestamp": "2026-05-07T19:10:34.305360",
+      "latency_s": 0.0001244839804712683,
+      "input_snapshot": "{'target': 'plugin_manager', 'context': {'intent': 'execution', 'mode': 'simulate', 'threat_type': 'none', 'sgl_risk_score': 0.0, 'governance_impact': 'advisory', 'constraint': 'write access needed for plugin_manager + tool_policy + loader'}}",
+      "output_snapshot": "{'target': 'plugin_manager', 'passed': True, 'phase_count': 7, 'passed_phases': 7, 'failed_phases': 0, 'risk_score': 0.05, 'risk_level': 'low', 'summary': 'PASSED | 0 failed | 2 warnings | risk low (0.05)', 'phases': [{'phase': 'parse', 'passed': True, 'verdict': 'ATSVerdict.PASS', 'details': \"Parse..."
+    },
+    {
+      "stage": "schedule",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.05,
+      "timestamp": "2026-05-07T19:10:34.305533",
+      "latency_s": 0.00016760401194915175,
+      "input_snapshot": "{'module_name': 'plugin_manager', 'risk_score': 0.05, 'ats_passed': True}",
+      "output_snapshot": "{'steps': [{'action': 'begin', 'result': {'status': 'started', 'module': 'plugin_manager', 'state': 'analyzing', 'risk_score': 0.05}}, {'action': 'complete_analysis', 'result': {'status': 'analysis_complete', 'module': 'plugin_manager', 'state': 'testing', 'capabilities': []}}, {'action': 'complete_..."
+    },
+    {
+      "stage": "govern",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.305556",
+      "latency_s": 1.9569997675716877e-05,
+      "input_snapshot": "{'target': 'plugin_manager'}",
+      "output_snapshot": "{'skill_count': 0, 'quarantined_count': 0, 'ecosystem_stability': 1.0}"
+    },
+    {
+      "stage": "log",
+      "status": "ok",
+      "decision_reason": "",
+      "risk_score": 0.0,
+      "timestamp": "2026-05-07T19:10:34.305570",
+      "latency_s": 1.096498453989625e-05,
+      "input_snapshot": "{'trace_id': 'trc-6bf1d43dfc21'}",
+      "output_snapshot": "{'trace_id': 'trc-6bf1d43dfc21', 'timestamp': '2026-05-07T19:10:34.305112', 'input': 'ACTION plugin_manager {\\n    intent: \"execution\",\\n    mode: \"simulate\",\\n    constraint: \"write access needed for plugin_manager + tool_policy + loader\",\\n    output: \"multi-module integration report\"\\n}', 'passed..."
+    }
+  ],
+  "final_output": {
+    "trace_id": "trc-6bf1d43dfc21",
+    "passed": true,
+    "risk_score": 0.05,
+    "total_latency_s": 0.00045,
+    "scheduler_final_state": "ready"
+  }
+}

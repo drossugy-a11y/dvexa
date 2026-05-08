@@ -1,0 +1,13 @@
+{"trace_id": "t1", "stage": "load", "type": "info", "payload": {"target": "test"}, "timestamp": 1778183794.8706255, "metadata": {}}
+{"trace_id": "t1", "stage": "semantic", "type": "decision", "payload": {"intent": "analysis"}, "timestamp": 1778183794.9706254, "metadata": {}}
+{"trace_id": "t1", "stage": "load", "type": "info", "payload": {}, "timestamp": 1778183794.961367, "metadata": {}}
+{"trace_id": "t1", "stage": "semantic", "type": "decision", "payload": {}, "timestamp": 1778183795.0613668, "metadata": {}}
+{"trace_id": "t1", "stage": "load", "type": "info", "payload": {"x": 1}, "timestamp": 1778183794.9669442, "metadata": {}}
+{"trace_id": "t1", "stage": "validate", "type": "decision", "payload": {"x": 2}, "timestamp": 1778183795.0669441, "metadata": {}}
+{"trace_id": "t1", "stage": "load", "type": "info", "payload": {}, "timestamp": 1778183794.9722104, "metadata": {}}
+{"trace_id": "t1", "stage": "semantic", "type": "decision", "payload": {}, "timestamp": 1778183795.0722103, "metadata": {}}
+{"trace_id": "t1", "stage": "validate", "type": "decision", "payload": {}, "timestamp": 1778183795.1722105, "metadata": {}}
+{"trace_id": "t1", "stage": "load", "type": "info", "payload": {}, "timestamp": 1778183794.9973974, "metadata": {}}
+{"trace_id": "t1", "stage": "semantic", "type": "decision", "payload": {}, "timestamp": 1778183795.0973973, "metadata": {}}
+{"trace_id": "t1", "stage": "load", "type": "info", "payload": {}, "timestamp": 1778183795.000725, "metadata": {}}
+{"trace_id": "t1", "stage": "semantic", "type": "decision", "payload": {}, "timestamp": 1778183795.100725, "metadata": {}}
