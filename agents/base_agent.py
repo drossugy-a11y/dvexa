@@ -1,4 +1,28 @@
 import json
+import re
+
+
+def safe_parse_plan(llm_output: str) -> dict | None:
+    """3-step robust JSON plan parser: direct → regex extraction → fallback."""
+    # Step 1: direct JSON parse
+    try:
+        data = json.loads(llm_output)
+        if isinstance(data, dict) and "goal" in data and "steps" in data:
+            return data
+    except json.JSONDecodeError:
+        pass
+
+    # Step 2: extract JSON object via regex
+    try:
+        match = re.search(r"\{.*\}", llm_output, re.DOTALL)
+        if match:
+            data = json.loads(match.group(0))
+            if isinstance(data, dict) and "goal" in data and "steps" in data:
+                return data
+    except (json.JSONDecodeError, AttributeError):
+        pass
+
+    return None
 
 
 class BaseAgent:
@@ -31,12 +55,9 @@ class BaseAgent:
         )
         prompt = f"任务：{task_input}"
         result = self.llm_tool.call(prompt, system_prompt=system_prompt)
-        try:
-            data = json.loads(result["content"])
-            if "goal" in data and "steps" in data:
-                return data
-        except json.JSONDecodeError:
-            pass
+        data = safe_parse_plan(result["content"])
+        if data is not None:
+            return data
         return {
             "goal": "执行任务",
             "steps": [{"id": 1, "action": task_input, "phase": "执行", "risk": "LOW", "depends_on": []}],
@@ -59,12 +80,9 @@ class BaseAgent:
         )
         prompt = f"原始任务：{original_input}\n执行情况：{context_info}\n新计划JSON："
         result = self.llm_tool.call(prompt, system_prompt=system_prompt)
-        try:
-            data = json.loads(result["content"])
-            if "goal" in data and "steps" in data:
-                return data
-        except json.JSONDecodeError:
-            pass
+        data = safe_parse_plan(result["content"])
+        if data is not None:
+            return data
         return None
 
     def execute_step(self, step: dict, context: dict) -> dict:

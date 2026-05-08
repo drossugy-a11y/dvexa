@@ -1,4 +1,4 @@
-"""Executor v1.6 — 去智能化执行引擎
+"""Executor v1.7 — 去智能化执行引擎
 
 职责收缩：
   - 基于规则选工具（不是推理）
@@ -11,6 +11,45 @@
   不做"是否正确"的判断
   不做"是否继续"的决策
 """
+
+import re
+
+
+def sanitize_code_input(code: str) -> str:
+    """Normalize full-width Unicode characters before code execution."""
+    replacements = {
+        "，": ",", "。": ".", "（": "(", "）": ")",
+        "：": ":", "；": ";", "“": "\"", "”": "\"",
+    }
+    for k, v in replacements.items():
+        code = code.replace(k, v)
+    code = re.sub(r"[^\x00-\x7F]+", "", code)
+    return code
+
+
+def validate_tool_input(tool_name: str, tool_input: str) -> bool:
+    """Prevent wrong tool matching for clearly non-executable inputs."""
+    if tool_name == "code_executor":
+        # Reject if input contains Chinese prose patterns
+        if "分析" in tool_input or "总结" in tool_input:
+            return False
+        # After sanitization: reject if input doesn't look like Python code
+        cleaned = sanitize_code_input(tool_input)
+        stripped = cleaned.strip()
+        if not stripped:
+            return False
+        # Try compile — if it works, it's valid Python
+        try:
+            compile(stripped, "<input>", "exec")
+            return True
+        except SyntaxError:
+            # Not valid Python — try extracting from markdown code block
+            import re as _re
+            blocks = _re.findall(r"```(?:python)?\s*\n?(.*?)```", stripped, _re.DOTALL)
+            if blocks and blocks[0].strip():
+                return True  # has extractable code
+            return False  # fall back to llm
+    return True
 
 
 class Executor:
@@ -28,6 +67,18 @@ class Executor:
         agent_output = self.agent.execute_step(step, context)
         tool_name = self._select_tool(action)
         tool_input = agent_output.get("output", action)
+
+        # Guard: prevent wrong tool matching
+        if not validate_tool_input(tool_name, tool_input):
+            tool_name = "llm"
+
+        # Sanitize code input to avoid Chinese character SyntaxError
+        if tool_name == "code_executor":
+            tool_input = sanitize_code_input(tool_input)
+            # Extract code from markdown code blocks if present
+            blocks = re.findall(r"```(?:python)?\s*\n?(.*?)```", tool_input, re.DOTALL)
+            if blocks and blocks[0].strip():
+                tool_input = blocks[0].strip()
 
         step_result = self._call_tool(tool_name, tool_input)
 
