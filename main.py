@@ -89,8 +89,14 @@ def main():
     # ─── FastAPI Response Types ─────────────────────────────────────────
     from fastapi.responses import FileResponse
 
+    # ─── Runtime Persona Kernel (v2) — 系统级身份注入 ─────────────────
+    from runtime.persona.runtime_persona import RuntimePersonaKernel
+    persona_kernel = RuntimePersonaKernel()
+
     # ─── 基础工具（被 Capability Layer 封装为 stateless skill） ───────────
     llm_tool = LLMTool(api_key=LLM_API_KEY, base_url=LLM_BASE_URL, model=LLM_MODEL)
+    # 默认注入 lightweight persona，确保所有 LLM 调用都有 runtime identity
+    llm_tool.set_runtime_persona(persona_kernel.get_system_prompt())
     http_tool = HTTPTool()
     code_tool = CodeExecutorTool()
 
@@ -283,6 +289,7 @@ def main():
         directive_engine=system_directive_engine,
         governance_kernel=decision_layer,
         state_machine=runtime_state_machine,
+        persona_kernel=persona_kernel,
     )
 
     # ─── DVX Surface Chat Runtime (v1) ────────────────────────────────
