@@ -1,29 +1,20 @@
-"""StepStreamer v1 — 流式步骤发射引擎
-
-将同步执行转换为按序可观测的 RuntimeStep 流。
-每个步骤立即推送到 WebSocket + 写入事件日志。
-"""
+"""StepStreamer v1 — 流式步骤发射引擎"""
 
 from __future__ import annotations
 
-import json
-import time
+import logging
 from typing import Any, Callable
 
-from runtime.step_events import StepType, RuntimeStep, make_step
-from runtime.runtime_state_machine import RuntimeStateMachine, RuntimeState
+from runtime.step_events import StepType, RuntimeStep
+from runtime.runtime_state_machine import RuntimeStateMachine
 
+logger = logging.getLogger("dvexa.streamer")
 
 StepCallback = Callable[[RuntimeStep], None]
 
 
 class StepStreamer:
-    """流式步骤发射器。
-
-    用法:
-        streamer = StepStreamer(state_machine, emitter)
-        streamer.emit(StepType.PLANNING, "Generating plan", "Decomposing task")
-    """
+    """流式步骤发射器。"""
 
     def __init__(self, state_machine: RuntimeStateMachine | None = None,
                  ws_push: Callable[[dict], None] | None = None):
@@ -32,89 +23,69 @@ class StepStreamer:
         self._steps: list[RuntimeStep] = []
         self._observers: list[StepCallback] = []
 
-    # ── 核心发射 ──────────────────────────────────────────────────────
+    def set_ws_push(self, callback: Callable[[dict], None]) -> None:
+        """设置 WebSocket 推送回调。"""
+        self._ws = callback
 
     def emit(self, step_type: StepType, title: str = "",
              content: str = "", metadata: dict | None = None) -> RuntimeStep:
-        """发射一个执行步骤。"""
         state = self._sm.get_state().value if self._sm else ""
         step = RuntimeStep(
-            step_type=step_type,
-            title=title,
-            content=content,
-            runtime_state=state,
-            metadata=metadata or {},
+            step_type=step_type, title=title, content=content,
+            runtime_state=state, metadata=metadata or {},
         )
         self._steps.append(step)
         payload = step.to_dict()
 
-        # WebSocket push
         if self._ws:
             try:
                 self._ws(payload)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("WS push failed for step %s: %s", step_type.value, e)
 
-        # Observer notification
         for obs in self._observers:
             try:
                 obs(step)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Observer failed for step %s: %s", step_type.value, e)
 
         return step
 
-    # ── 便捷方法 ──────────────────────────────────────────────────────
-
-    def directive(self, title: str = "", content: str = "",
-                  metadata: dict | None = None) -> RuntimeStep:
+    def directive(self, title="", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.DIRECTIVE, title, content, metadata)
 
-    def governance(self, title: str = "", content: str = "",
-                   metadata: dict | None = None) -> RuntimeStep:
+    def governance(self, title="", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.GOVERNANCE, title, content, metadata)
 
-    def planning(self, title: str = "", content: str = "",
-                 metadata: dict | None = None) -> RuntimeStep:
+    def planning(self, title="", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.PLANNING, title, content, metadata)
 
-    def execution(self, title: str = "", content: str = "",
-                  metadata: dict | None = None) -> RuntimeStep:
+    def execution(self, title="", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.EXECUTION, title, content, metadata)
 
-    def tool_call(self, title: str = "", content: str = "",
-                  metadata: dict | None = None) -> RuntimeStep:
+    def tool_call(self, title="", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.TOOL_CALL, title, content, metadata)
 
-    def tool_result(self, title: str = "", content: str = "",
-                    metadata: dict | None = None) -> RuntimeStep:
+    def tool_result(self, title="", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.TOOL_RESULT, title, content, metadata)
 
-    def thinking(self, title: str = "", content: str = "",
-                 metadata: dict | None = None) -> RuntimeStep:
+    def thinking(self, title="", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.THINKING, title, content, metadata)
 
-    def memory(self, title: str = "", content: str = "",
-               metadata: dict | None = None) -> RuntimeStep:
+    def memory(self, title="", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.MEMORY, title, content, metadata)
 
-    def output(self, title: str = "", content: str = "",
-               metadata: dict | None = None) -> RuntimeStep:
+    def output(self, title="", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.OUTPUT, title, content, metadata)
 
-    def complete(self, title: str = "Completed", content: str = "",
-                 metadata: dict | None = None) -> RuntimeStep:
+    def complete(self, title="Completed", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.COMPLETE, title, content, metadata)
 
-    def error(self, title: str = "Error", content: str = "",
-              metadata: dict | None = None) -> RuntimeStep:
+    def error(self, title="Error", content="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.ERROR, title, content, metadata)
 
-    def blocked(self, reason: str = "",
-                metadata: dict | None = None) -> RuntimeStep:
+    def blocked(self, reason="", metadata=None) -> RuntimeStep:
         return self.emit(StepType.BLOCKED, "Execution Blocked", reason, metadata)
-
-    # ── 观察者 ────────────────────────────────────────────────────────
 
     def subscribe(self, callback: StepCallback) -> None:
         self._observers.append(callback)
@@ -122,8 +93,6 @@ class StepStreamer:
     def unsubscribe(self, callback: StepCallback) -> None:
         if callback in self._observers:
             self._observers.remove(callback)
-
-    # ── 查询 ──────────────────────────────────────────────────────────
 
     @property
     def steps(self) -> list[RuntimeStep]:

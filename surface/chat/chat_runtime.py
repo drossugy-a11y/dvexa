@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 import uuid
 import threading
@@ -50,7 +51,7 @@ class ChatRuntime:
         def ws_push(payload: dict):
             emitter.emit_event_dict(payload)
 
-        self._streamer._ws = ws_push
+        self._streamer.set_ws_push(ws_push)
 
         emitter.emit_stream_started()
         self._streamer.directive(
@@ -72,8 +73,8 @@ class ChatRuntime:
                 if self._observer:
                     try:
                         self._observer(result)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logging.getLogger("dvexa.chat").warning("Observer failed: %s", e)
 
                 if status == "failed":
                     emitter.emit_error(result.get("result", str(result)))

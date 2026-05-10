@@ -6,11 +6,15 @@ emit() → 立即推送 websocket + append 到事件日志。
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import time
 from typing import Any
 
 from surface.chat.chat_dto import TimelineEventDTO
+
+logger = logging.getLogger("dvexa.stream")
 
 
 class StreamEmitter:
@@ -18,12 +22,21 @@ class StreamEmitter:
 
     def __init__(self, task_id: str):
         self.task_id = task_id
-        self._events: list[TimelineEventDTO] = []
-        self._ws = None
+        self._events: list[TimelineEventDTO | dict] = []
+        self._ws: Any = None
         self._finalized = False
 
-    def set_websocket(self, ws):
+    def set_websocket(self, ws: Any) -> None:
         self._ws = ws
+
+    def _send_ws(self, data: str) -> None:
+        """推送 JSON 到 WebSocket。失败时记录日志，不抛出。"""
+        if not self._ws:
+            return
+        try:
+            asyncio.create_task(self._ws.send_text(data))
+        except Exception as e:
+            logger.warning("WebSocket send failed: %s", e)
 
     def emit_event_dict(self, payload: dict) -> None:
         """直接发射 dict 格式的事件（供 StepStreamer 使用）。"""
@@ -33,13 +46,7 @@ class StreamEmitter:
         event["task_id"] = self.task_id
         event["timestamp"] = event.get("timestamp", time.strftime("%H:%M:%S"))
         self._events.append(event)
-        if self._ws:
-            try:
-                import asyncio
-                import json
-                asyncio.ensure_future(self._ws.send_text(json.dumps(payload, default=str)))
-            except Exception:
-                pass
+        self._send_ws(json.dumps(event, default=str))
 
     def emit(self, event: TimelineEventDTO) -> None:
         if self._finalized:
@@ -47,12 +54,7 @@ class StreamEmitter:
         event.task_id = self.task_id
         event.timestamp = event.timestamp or time.strftime("%H:%M:%S")
         self._events.append(event)
-        if self._ws:
-            try:
-                import asyncio
-                asyncio.ensure_future(self._ws.send_text(json.dumps(event.to_dict(), default=str)))
-            except Exception:
-                pass
+        self._send_ws(json.dumps(event.to_dict(), default=str))
 
     def emit_planning(self, goal: str) -> None:
         self.emit(TimelineEventDTO(
@@ -79,7 +81,6 @@ class StreamEmitter:
         ))
 
     def emit_message_chunk(self, content: str, index: int = 0) -> None:
-        """Incremental token append — 前端收到后追加到当前 assistant message。"""
         self.emit(TimelineEventDTO(
             event_type="message_chunk", task_id=self.task_id,
             content=content, step_id=str(index),
@@ -102,22 +103,15 @@ class StreamEmitter:
         ))
 
     def emit_stream_completed(self) -> None:
-        """强制 finalize — 确保前端锁释放。"""
         if self._finalized:
             return
-        # Bypass _finalized check: emit the event BEFORE marking finalized
         event = TimelineEventDTO(
             event_type="stream_completed", task_id=self.task_id, status="completed",
         )
         event.task_id = self.task_id
         event.timestamp = event.timestamp or time.strftime("%H:%M:%S")
         self._events.append(event)
-        if self._ws:
-            try:
-                import asyncio
-                asyncio.ensure_future(self._ws.send_text(json.dumps(event.to_dict(), default=str)))
-            except Exception:
-                pass
+        self._send_ws(json.dumps(event.to_dict(), default=str))
         self._finalized = True
 
     def emit_stream_error(self, reason: str) -> None:
@@ -129,12 +123,7 @@ class StreamEmitter:
         event.task_id = self.task_id
         event.timestamp = event.timestamp or time.strftime("%H:%M:%S")
         self._events.append(event)
-        if self._ws:
-            try:
-                import asyncio
-                asyncio.ensure_future(self._ws.send_text(json.dumps(event.to_dict(), default=str)))
-            except Exception:
-                pass
+        self._send_ws(json.dumps(event.to_dict(), default=str))
         self._finalized = True
 
     def get_events(self) -> list[dict]:
