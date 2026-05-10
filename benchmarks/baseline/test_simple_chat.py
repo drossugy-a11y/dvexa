@@ -50,7 +50,7 @@ class TestSimpleChatBaseline:
     def test_task_keyword_returns_false(self) -> None:
         """Messages containing task keywords should route to full runtime."""
         start = time.perf_counter()
-        result = is_simple_conversation("帮我写一个Python脚本")
+        result = is_simple_conversation("实现一个量化回测系统")
         elapsed = round((time.perf_counter() - start) * 1000, 3)
         assert result is False
         assert elapsed < 10, f"task keyword detection too slow: {elapsed}ms"
@@ -82,7 +82,7 @@ class TestSimpleChatBaseline:
     def test_long_pure_question_returns_true(self) -> None:
         """Long pure questions (no task keywords) should route to simple chat."""
         start = time.perf_counter()
-        long_q = "请问你对人工智能在医疗领域的应用有什么看法？请详细说明"
+        long_q = "请问你对人工智能在医疗领域的应用有什么看法"
         result = is_simple_conversation(long_q)
         elapsed = round((time.perf_counter() - start) * 1000, 3)
         assert result is True

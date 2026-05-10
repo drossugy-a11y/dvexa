@@ -26,6 +26,8 @@ class Event:
         payload: 事件数据
         timestamp:  Unix 时间戳
         metadata:  可选元数据
+        runtime_mode:  运行时模式 (chat / task / tool / explore / system)
+        directive_profile:  身份 Profile (lightweight / standard / governance / coding)
     """
     trace_id: str
     stage: str
@@ -33,6 +35,8 @@ class Event:
     payload: dict
     timestamp: float = 0.0
     metadata: dict = field(default_factory=dict)
+    runtime_mode: str = ""
+    directive_profile: str = ""
 
     def __post_init__(self):
         if not self.timestamp:
@@ -150,6 +154,8 @@ class EventStore:
                 "payload": event.payload,
                 "timestamp": event.timestamp,
                 "metadata": event.metadata,
+                "runtime_mode": event.runtime_mode,
+                "directive_profile": event.directive_profile,
             }, ensure_ascii=False) + "\n")
 
     def _load_trace(self, trace_id: str) -> list[Event]:
@@ -171,6 +177,8 @@ class EventStore:
                     payload=data.get("payload", {}),
                     timestamp=data.get("timestamp", 0.0),
                     metadata=data.get("metadata", {}),
+                    runtime_mode=data.get("runtime_mode", ""),
+                    directive_profile=data.get("directive_profile", ""),
                 ))
         return events
 

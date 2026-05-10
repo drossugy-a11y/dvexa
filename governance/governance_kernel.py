@@ -143,6 +143,7 @@ class GovernanceKernel:
         Returns:
             {"filtered_plan": {...}, "strategy": "...", "decisions": [...]}
         """
+        # ── HARD GOVERNANCE (deterministic, replayable) ─────────────────
         # Step 0: Complexity Budget (pre-control)
         if self._complexity_budget:
             budget = self._complexity_budget.assign_budget(task)
@@ -199,7 +200,7 @@ class GovernanceKernel:
 
             step_decisions: list[dict] = []
 
-            # ── Checkpoint 1: ToolPolicy ──────────────────────────────
+            # ── HARD: Checkpoint 1 — ToolPolicy ───────────────────────
             d = self._check_tool_policy(skill_name, tool_name, step_id,
                                         action_text, config)
             step_decisions.append(d)
@@ -211,7 +212,7 @@ class GovernanceKernel:
                 tool_name = step["tool"]
                 skill_name = _to_skill_name(tool_name)
 
-            # ── Checkpoint 2: ATS ────────────────────────────────────
+            # ── HARD: Checkpoint 2 — ATS ────────────────────────────
             d = self._check_ats(action_text, step_id, config)
             step_decisions.append(d)
             if d["action"] == "block":
@@ -223,13 +224,13 @@ class GovernanceKernel:
                 filtered.append(step)
                 continue
 
-            # ── Checkpoint 3: SkillScore ─────────────────────────────
+            # ── HARD: Checkpoint 3 — SkillScore ─────────────────────
             d = self._check_skill_score(skill_name, step_id, config)
             step_decisions.append(d)
             if d["action"] == "downgrade":
                 step = self._downgrade_step(step)
 
-            # ── Checkpoint 4: Lifecycle ──────────────────────────────
+            # ── HARD: Checkpoint 4 — Lifecycle ──────────────────────
             d = self._check_lifecycle(skill_name, step_id, config)
             step_decisions.append(d)
             if d["action"] == "block":
@@ -241,7 +242,7 @@ class GovernanceKernel:
                 filtered.append(step)
                 continue
 
-            # ── Checkpoint 4.5: Capability Awareness ──────────────────
+            # ── HARD: Checkpoint 4.5 — Capability Awareness ──────────
             # 查询 capability taxonomy 中该 skill 的 maturity/risk
             d = self._check_capability_for_step(skill_name, step_id)
             if d:
@@ -255,7 +256,7 @@ class GovernanceKernel:
                     filtered.append(step)
                     continue
 
-            # ── Checkpoint 5: Strategy Override ──────────────────────
+            # ── SOFT: Checkpoint 5 — Strategy Override ───────────────
             if config.get("prefer_reasoning") and tool_name \
                and step.get("type") != "reasoning":
                 step = self._downgrade_step(step)
