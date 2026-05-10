@@ -25,6 +25,7 @@ def _err(msg: str) -> dict:
 def create_surface_router(
     snapshot_builder: SystemSnapshotBuilder,
     cache: StateCache | None = None,
+    state_machine: Any = None,
 ) -> APIRouter:
     """创建 Surface APIRouter，注入依赖。"""
     router = APIRouter(prefix="/surface", tags=["surface"])
@@ -126,5 +127,10 @@ def create_surface_router(
             return _ok(snap.execution_history)
         except Exception as e:
             return _err(str(e))
+
+    if state_machine is not None:
+        @router.get("/runtime-state")
+        def get_runtime_state() -> dict:
+            return _ok(state_machine.to_dict())
 
     return router

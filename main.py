@@ -249,7 +249,12 @@ def main():
         pattern_registry=None,  # 按需添加
         external_reporter=external_reporter,
     )
-    surface_router = create_surface_router(surface_builder, surface_cache)
+    from runtime.runtime_state_machine import RuntimeStateMachine
+    runtime_state_machine = RuntimeStateMachine()
+    surface_router = create_surface_router(
+        surface_builder, surface_cache,
+        state_machine=runtime_state_machine,
+    )
     app.include_router(surface_router)
 
     # ─── DVX Unified Runtime Loop (v1) ──────────────────────────────
@@ -258,6 +263,7 @@ def main():
         kernel=kernel,
         directive_engine=system_directive_engine,
         governance_kernel=decision_layer,
+        state_machine=runtime_state_machine,
     )
 
     # ─── DVX Surface Chat Runtime (v1) ────────────────────────────────
