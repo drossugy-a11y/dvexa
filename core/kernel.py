@@ -35,7 +35,14 @@ class DVexaKernel:
 
         # === PLANNING 阶段 ===
         task.mark_planning()
-        plan_data = self.executor.plan_task(task_input)
+        # Inject directive system prompt into planner input
+        planner_input = task_input
+        if task.directive is not None:
+            planner_input = (
+                task.directive.to_system_prompt()
+                + "\n\nUser request: " + task_input
+            )
+        plan_data = self.executor.plan_task(planner_input)
         task.set_plan(plan_data.get("goal", ""), plan_data.get("steps", []))
 
         # === EXECUTING 阶段 ===
