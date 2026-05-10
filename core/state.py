@@ -23,6 +23,7 @@ class TaskState:
         self.retry_count = 0
         self.max_retries = 2
         self.error = None
+        self.directive = None  # SystemDirective (set by kernel)
 
     def set_plan(self, goal: str, steps: list):
         self.plan_goal = goal

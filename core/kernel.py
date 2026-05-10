@@ -9,7 +9,8 @@ class DVexaKernel:
     def __init__(self, scheduler: Scheduler, executor: Executor,
                  memory: MemoryStore, feedback_engine=None,
                  global_optimizer=None, stability_layer=None,
-                 meta_control_plane=None):
+                 meta_control_plane=None,
+                 system_directive_engine=None):
         self.scheduler = scheduler
         self.executor = executor
         self.memory = memory
@@ -17,10 +18,20 @@ class DVexaKernel:
         self._global_optimizer = global_optimizer
         self._stability_layer = stability_layer
         self._meta_control_plane = meta_control_plane
+        self._system_directive_engine = system_directive_engine
         self._task_count = 0
 
     def run_task(self, task_input: str):
         task = self.scheduler.create_task(task_input)
+
+        # ── System Directive Engine (v1) — 执行前行为控制 ──────────────
+        if self._system_directive_engine is not None:
+            sde_ctx = {
+                "input": task_input,
+                "task_count": self._task_count,
+                "has_tools": True,
+            }
+            task.directive = self._system_directive_engine.process(task_input, sde_ctx)
 
         # === PLANNING 阶段 ===
         task.mark_planning()

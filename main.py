@@ -44,6 +44,7 @@ from governance.complexity_budget import ComplexityBudget
 from governance.global_optimization import GlobalOptimizationLoop
 from governance.stability_layer import StabilityLayer
 from governance.meta_control_plane import MetaControlPlane
+from governance.system_directive_engine import SystemDirectiveEngine
 
 # ─── Capability Taxonomy Layer (v1.9) ──────────────────────────────────────
 from capabilities.taxonomy import (
@@ -101,6 +102,8 @@ def main():
 
     # ─── Meta Control Plane (v3) — 元控制层 ─────────────────────────
     meta_control_plane = MetaControlPlane()
+
+    # ─── System Directive Engine (v1) — 行为控制器（稍后注入 kernel） ──
 
     # ─── Global Optimization Loop (v1) — 系统自优化 ──────────────────────
     global_optimizer = GlobalOptimizationLoop(
@@ -173,6 +176,12 @@ def main():
         capability_registry=taxonomy_registry,
     )
 
+    # ─── System Directive Engine (v1) — 行为控制器 ──────────────────
+    system_directive_engine = SystemDirectiveEngine(
+        governance_kernel=decision_layer,
+        capability_registry=taxonomy_registry,
+    )
+
     # 自动注册 governance modules
     _register_governance_capabilities(taxonomy_registry)
 
@@ -191,7 +200,8 @@ def main():
                          feedback_engine=feedback_engine,
                          global_optimizer=global_optimizer,
                          stability_layer=stability_layer,
-                         meta_control_plane=meta_control_plane)
+                         meta_control_plane=meta_control_plane,
+                         system_directive_engine=system_directive_engine)
     set_kernel(kernel)
 
     # ─── Execution Report Layer (v1.88) ──────────────────────────────────
@@ -206,8 +216,9 @@ def main():
 
     # 注入 API 观察链路
     from api.server import set_observer
-    set_observer(lambda kernel_result: (
-        report_formatter.to_text(
+
+    def _observer_fn(kernel_result):
+        return report_formatter.to_text(
             report_builder.from_kernel_result(
                 result=kernel_result,
                 governor=governor,
@@ -215,13 +226,15 @@ def main():
                 external_reporter=external_reporter,
             )
         )
-    ))
+    set_observer(_observer_fn)
 
     # ─── DVX Surface (v1) — 自省前端系统 ─────────────────────────────
     from surface.snapshot_builder import SystemSnapshotBuilder
     from surface.state_cache import StateCache
     from surface.api import create_surface_router
     from surface.websocket import SurfaceWebSocket
+    from surface.chat.chat_runtime import ChatRuntime
+    from surface.chat.api import create_chat_router
     from fastapi.staticfiles import StaticFiles
 
     surface_cache = StateCache()
@@ -239,10 +252,38 @@ def main():
     surface_router = create_surface_router(surface_builder, surface_cache)
     app.include_router(surface_router)
 
+    # ─── DVX Unified Runtime Loop (v1) ──────────────────────────────
+    from runtime.unified_loop import UnifiedRuntimeLoop
+    unified_loop = UnifiedRuntimeLoop(
+        kernel=kernel,
+        directive_engine=system_directive_engine,
+        governance_kernel=decision_layer,
+    )
+
+    # ─── DVX Surface Chat Runtime (v1) ────────────────────────────────
+    chat_runtime = ChatRuntime(
+        kernel=kernel, observer=_observer_fn,
+        loop=unified_loop,
+    )
+    chat_router = create_chat_router(chat_runtime)
+    app.include_router(chat_router)
+
     # 挂载前端静态文件
     dist_path = Path(__file__).parent / "surface-ui" / "dist"
     if dist_path.exists():
-        app.mount("/", StaticFiles(directory=str(dist_path), html=True), name="surface-ui")
+        from fastapi.responses import FileResponse
+        app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="surface-assets")
+
+        @app.get("/{full_path:path}")
+        async def serve_frontend(full_path: str):
+            # API 路由优先，非 API 请求返回 index.html
+            if full_path.startswith("surface/") or full_path in ("task", "tasks", "health", "ws"):
+                from fastapi.responses import JSONResponse
+                return JSONResponse(status_code=404, content={"detail": "Not Found"})
+            index = dist_path / "index.html"
+            if index.exists():
+                return FileResponse(str(index))
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
     # WebSocket 后台广播（在 uvicorn 启动后运行）
     surface_ws = SurfaceWebSocket(surface_builder, interval=5.0)
