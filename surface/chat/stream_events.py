@@ -25,6 +25,22 @@ class StreamEmitter:
     def set_websocket(self, ws):
         self._ws = ws
 
+    def emit_event_dict(self, payload: dict) -> None:
+        """直接发射 dict 格式的事件（供 StepStreamer 使用）。"""
+        if self._finalized:
+            return
+        event = dict(payload)
+        event["task_id"] = self.task_id
+        event["timestamp"] = event.get("timestamp", time.strftime("%H:%M:%S"))
+        self._events.append(event)
+        if self._ws:
+            try:
+                import asyncio
+                import json
+                asyncio.ensure_future(self._ws.send_text(json.dumps(payload, default=str)))
+            except Exception:
+                pass
+
     def emit(self, event: TimelineEventDTO) -> None:
         if self._finalized:
             return
@@ -122,7 +138,7 @@ class StreamEmitter:
         self._finalized = True
 
     def get_events(self) -> list[dict]:
-        return [e.to_dict() for e in self._events]
+        return [e.to_dict() if hasattr(e, 'to_dict') else e for e in self._events]
 
     @property
     def is_finalized(self) -> bool:

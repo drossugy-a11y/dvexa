@@ -76,15 +76,15 @@ class TestChatRuntime:
         assert emitter._ws == "mock_ws"
 
     def test_get_task_events_returns_list(self):
-        runtime = ChatRuntime(FakeKernel())
+        runtime = ChatRuntime(FakeKernel(delay=0.1))
         resp = runtime.submit_message("test")
-        time.sleep(0.2)
+        time.sleep(0.05)
         events = runtime.get_task_events(resp.task_id)
         assert isinstance(events, list)
-        # Should have stream_started as first event
+        # Should have stream_started as first event, then runtime_step
         assert len(events) >= 2
         assert events[0]["event_type"] == "stream_started"
-        assert events[1]["event_type"] == "planning_started"
+        assert events[1]["event_type"] == "runtime_step"
 
     def test_get_task_events_empty_for_unknown(self):
         runtime = ChatRuntime(FakeKernel())
