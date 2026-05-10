@@ -1,10 +1,19 @@
+"""Base Agent — DVX Runtime Agent with directive-aware planning
+
+Detects SystemDirective in task_input and adjusts behavior:
+- MUST_PLAN=True  → structured JSON planning (legacy mode)
+- MUST_PLAN=False → simple chat response (no structured steps)
+"""
+
+from __future__ import annotations
+
 import json
 import re
+from typing import Any
 
 
 def safe_parse_plan(llm_output: str) -> dict | None:
     """3-step robust JSON plan parser: direct → regex extraction → fallback."""
-    # Step 1: direct JSON parse
     try:
         data = json.loads(llm_output)
         if isinstance(data, dict) and "goal" in data and "steps" in data:
@@ -12,7 +21,6 @@ def safe_parse_plan(llm_output: str) -> dict | None:
     except json.JSONDecodeError:
         pass
 
-    # Step 2: extract JSON object via regex
     try:
         match = re.search(r"\{.*\}", llm_output, re.DOTALL)
         if match:
@@ -25,11 +33,62 @@ def safe_parse_plan(llm_output: str) -> dict | None:
     return None
 
 
+def _has_directive_flag(task_input: str, flag: str) -> bool:
+    """检查 task_input 中是否包含 directive 标志。"""
+    return flag in task_input[:300]
+
+
+def _is_chat_mode(task_input: str) -> bool:
+    """检测是否为 chat 模式（MUST_PLAN=False 或 MODE=chat）。"""
+    return _has_directive_flag(task_input, "MUST_PLAN: False") or \
+           _has_directive_flag(task_input, "MODE: chat") or \
+           _has_directive_flag(task_input, "MODE: explore")
+
+
+def _strip_directive(task_input: str) -> str:
+    """从 task_input 中提取纯用户请求。"""
+    if "User request:" in task_input:
+        return task_input.split("User request:", 1)[-1].strip()
+    if "用户请求：" in task_input:
+        return task_input.split("用户请求：", 1)[-1].strip()
+    return task_input
+
+
 class BaseAgent:
     def __init__(self, llm_tool):
         self.llm_tool = llm_tool
 
     def plan(self, task_input: str) -> dict:
+        if _is_chat_mode(task_input):
+            return self._plan_chat(task_input)
+        return self._plan_task(task_input)
+
+    def _plan_chat(self, task_input: str) -> dict:
+        """Chat 模式：简单位响应，无结构化规划。"""
+        user_request = _strip_directive(task_input)
+        system_prompt = (
+            "You are a DVX Runtime Agent inside DVexa OS.\n"
+            "You produce EXACTLY ONE consolidated response.\n"
+            "Do NOT simulate multi-step conversations.\n"
+            "Do NOT use numbered steps in your response.\n"
+            "Do NOT generate continuation prompts.\n"
+            "Produce a single, complete answer. Then stop."
+        )
+        result = self.llm_tool.call(user_request, system_prompt=system_prompt)
+        output = result.get("content", str(result))
+
+        return {
+            "goal": output[:100],
+            "steps": [{
+                "id": 1,
+                "action": output,
+                "type": "reasoning",
+            }],
+        }
+
+    def _plan_task(self, task_input: str) -> dict:
+        """Task 模式：结构化 JSON 规划（原逻辑）。"""
+        user_request = _strip_directive(task_input)
         system_prompt = (
             "你是一个任务规划器。分析用户任务并输出严格结构化执行计划。\n\n"
             "🚨 强约束（必须遵守）\n"
@@ -61,14 +120,13 @@ class BaseAgent:
             "- 不确定 → reasoning\n\n"
             "📤 只输出 JSON，不允许任何额外内容。"
         )
-        prompt = f"用户任务：{task_input}"
-        result = self.llm_tool.call(prompt, system_prompt=system_prompt)
+        result = self.llm_tool.call(user_request, system_prompt=system_prompt)
         data = safe_parse_plan(result["content"])
         if data is not None:
             return data
         return {
-            "goal": task_input,
-            "steps": [{"id": 1, "action": task_input, "type": "tool", "tool": "llm", "input": task_input}],
+            "goal": user_request,
+            "steps": [{"id": 1, "action": user_request, "type": "tool", "tool": "llm", "input": user_request}],
         }
 
     def replan(self, original_input: str, failed_step: dict, error_msg: str):
@@ -86,7 +144,8 @@ class BaseAgent:
             '{"goal": "...", "failure_type": "TOOL_ERROR", '
             '"steps": [{"id": 1, "action": "...", "type": "reasoning | tool | memory"}]}'
         )
-        prompt = f"原始任务：{original_input}\n执行情况：{context_info}\n新计划JSON："
+        original_clean = _strip_directive(original_input)
+        prompt = f"原始任务：{original_clean}\n执行情况：{context_info}\n新计划JSON："
         result = self.llm_tool.call(prompt, system_prompt=system_prompt)
         data = safe_parse_plan(result["content"])
         if data is not None:
@@ -99,17 +158,36 @@ class BaseAgent:
         step_index = context.get("step_index", 0)
         total = context.get("total_steps", 1)
 
-        history_summary = "\n".join(
-            f"步骤{h['step_id']}: [{h.get('confidence','-')}] 工具={h.get('tool','?')} → {str(h.get('output',''))[:200]}"
-            for h in history
-        ) if history else "（尚无已执行步骤）"
+        # Chat mode: simple prompt without "第N步" language
+        if total <= 1 and len(action) < 500:
+            history_summary = ""
+            if history:
+                parts = [f"Previous: {str(h.get('output', ''))[:200]}" for h in history]
+                history_summary = "\n".join(parts)
 
-        system_prompt = (
-            f"你正在执行任务第 {step_index+1}/{total} 步。\n"
-            f"已执行步骤：\n{history_summary}\n\n"
-            "根据上下文执行当前步骤并返回结果。"
-        )
-        agent_output = self.llm_tool.call(action, system_prompt=system_prompt)
+            system_prompt = (
+                "You are a DVX Runtime Agent.\n"
+                "Produce a single, complete response.\n"
+                "Do NOT use numbered steps or multi-turn format."
+            )
+            if history_summary:
+                prompt = f"Context:\n{history_summary}\n\nRespond to: {action}"
+            else:
+                prompt = action
+        else:
+            history_summary = "\n".join(
+                f"Step {h['step_id']}: [{h.get('confidence','-')}] tool={h.get('tool','?')} → {str(h.get('output',''))[:200]}"
+                for h in history
+            ) if history else "（no prior steps）"
+
+            system_prompt = (
+                f"You are executing step {step_index+1}/{total}.\n"
+                f"Prior steps:\n{history_summary}\n\n"
+                "Execute the current step and return the result."
+            )
+            prompt = action
+
+        agent_output = self.llm_tool.call(prompt, system_prompt=system_prompt)
         output_text = agent_output.get("content", str(agent_output))
 
         confidence = self._compute_confidence(output_text)

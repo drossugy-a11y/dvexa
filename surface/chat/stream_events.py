@@ -20,21 +20,25 @@ logger = logging.getLogger("dvexa.stream")
 class StreamEmitter:
     """事件发射器。持有 websocket 引用时实时广播，否则仅记录。"""
 
-    def __init__(self, task_id: str):
+    def __init__(self, task_id: str, loop: asyncio.AbstractEventLoop | None = None):
         self.task_id = task_id
         self._events: list[TimelineEventDTO | dict] = []
         self._ws: Any = None
+        self._loop = loop
         self._finalized = False
 
     def set_websocket(self, ws: Any) -> None:
         self._ws = ws
 
+    def set_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        self._loop = loop
+
     def _send_ws(self, data: str) -> None:
         """推送 JSON 到 WebSocket。失败时记录日志，不抛出。"""
-        if not self._ws:
+        if not self._ws or not self._loop:
             return
         try:
-            asyncio.create_task(self._ws.send_text(data))
+            asyncio.run_coroutine_threadsafe(self._ws.send_text(data), self._loop)
         except Exception as e:
             logger.warning("WebSocket send failed: %s", e)
 

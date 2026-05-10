@@ -45,7 +45,7 @@ class TestTurnLock:
         assert self.lock.state == TurnState.IDLE
         assert self.lock.can_start_turn()
         assert not self.lock.is_locked()
-        assert record.assistant_output == "world"
+        assert record.output == "world"
         assert record.duration() >= 0
 
     def test_cannot_complete_from_idle(self):
@@ -77,7 +77,7 @@ class TestTurnLock:
         self.lock.start_turn("hello")
         self.lock.mark_streaming()
         record = self.lock.complete_turn("world")
-        assert record.assistant_output == "world"
+        assert record.output == "world"
 
     def test_turn_record_duration(self):
         self.lock.start_turn("slow")

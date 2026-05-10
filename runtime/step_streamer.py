@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from runtime.step_events import StepType, RuntimeStep
 from runtime.runtime_state_machine import RuntimeStateMachine
+from runtime.cognitive_mapping import get_cognitive
 
 logger = logging.getLogger("dvexa.streamer")
 
@@ -30,9 +31,12 @@ class StepStreamer:
     def emit(self, step_type: StepType, title: str = "",
              content: str = "", metadata: dict | None = None) -> RuntimeStep:
         state = self._sm.get_state().value if self._sm else ""
+        cognitive_state, cognitive_label = get_cognitive(step_type)
         step = RuntimeStep(
             step_type=step_type, title=title, content=content,
             runtime_state=state, metadata=metadata or {},
+            cognitive_state=cognitive_state,
+            cognitive_label=cognitive_label,
         )
         self._steps.append(step)
         payload = step.to_dict()

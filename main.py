@@ -9,9 +9,12 @@
   - Capabilities / Skills / Governance
 """
 
+import logging
+import os
 from pathlib import Path
 import uvicorn
-from config.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL
+from config.config import LLM_API_KEY, LLM_BASE_URL, LLM_MODEL, validate_config
+import config.config
 from core.kernel import DVexaKernel
 from core.scheduler import Scheduler
 from core.executor import Executor
@@ -70,6 +73,22 @@ from report.formatter import ReportFormatter
 
 
 def main():
+    # ─── 配置验证 + 日志初始化 ──────────────────────────────────────────
+    missing = validate_config()
+    if missing:
+        print(f"[STARTUP] Missing config: {', '.join(missing)}")
+        print("[STARTUP] Create .env file with required values")
+        return
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    # ─── FastAPI Response Types ─────────────────────────────────────────
+    from fastapi.responses import FileResponse
+
     # ─── 基础工具（被 Capability Layer 封装为 stateless skill） ───────────
     llm_tool = LLMTool(api_key=LLM_API_KEY, base_url=LLM_BASE_URL, model=LLM_MODEL)
     http_tool = HTTPTool()
@@ -277,14 +296,13 @@ def main():
     # 挂载前端静态文件
     dist_path = Path(__file__).parent / "surface-ui" / "dist"
     if dist_path.exists():
-        from fastapi.responses import FileResponse
         app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="surface-assets")
 
         @app.get("/{full_path:path}")
         async def serve_frontend(full_path: str):
+            from fastapi.responses import JSONResponse
             # API 路由优先，非 API 请求返回 index.html
             if full_path.startswith("surface/") or full_path in ("task", "tasks", "health", "ws"):
-                from fastapi.responses import JSONResponse
                 return JSONResponse(status_code=404, content={"detail": "Not Found"})
             index = dist_path / "index.html"
             if index.exists():
@@ -313,7 +331,7 @@ def main():
         meta_control_plane=meta_control_plane,
     )
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host=config.config.HOST, port=config.config.PORT)
 
 
 def _init_opencode_assimilation_pipeline(governor, meta_control_plane):

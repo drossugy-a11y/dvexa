@@ -18,6 +18,7 @@ import uuid
 from enum import Enum
 from dataclasses import dataclass, field
 from threading import Lock
+from typing import Any
 
 
 class TurnState(str, Enum):
@@ -29,16 +30,38 @@ class TurnState(str, Enum):
 
 @dataclass
 class TurnRecord:
+    """轮次记录 — 统一跨模块使用。"""
     turn_id: str
     state: TurnState
     started_at: float
     completed_at: float = 0.0
     user_input: str = ""
-    assistant_output: str = ""
+    # 扩展字段 (供 UnifiedRuntimeLoop 使用)
+    turn_count: int = 0
+    mode: str = "chat"
+    directive: dict | None = None
+    output: str = ""
+    error: str | None = None
+    phase_timing: dict[str, float] = field(default_factory=dict)
 
     def duration(self) -> float:
         end = self.completed_at or time.time()
         return round(end - self.started_at, 3)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "turn_id": self.turn_id,
+            "state": self.state.value,
+            "turn_count": self.turn_count,
+            "mode": self.mode,
+            "has_directive": self.directive is not None,
+            "has_output": bool(self.output),
+            "user_input": self.user_input[:100],
+            "output": self.output[:200],
+            "error": self.error,
+            "duration": self.duration(),
+            "phases": list(self.phase_timing.keys()),
+        }
 
 
 class TurnLock:
@@ -59,7 +82,8 @@ class TurnLock:
         """检查是否可以开始新轮次。"""
         return self._state == TurnState.IDLE
 
-    def start_turn(self, user_input: str = "") -> TurnRecord:
+    def start_turn(self, user_input: str = "",
+                   turn_count: int = 0) -> TurnRecord:
         """开始新轮次。"""
         with self._lock:
             if self._state != TurnState.IDLE:
@@ -72,6 +96,7 @@ class TurnLock:
                 state=TurnState.ACTIVE,
                 started_at=time.time(),
                 user_input=user_input,
+                turn_count=turn_count,
             )
             return self._current_turn
 
@@ -93,12 +118,11 @@ class TurnLock:
                 raise RuntimeError(
                     f"TURN_LOCK: cannot complete turn in state {self._state.value}"
                 )
-            old_state = self._state
             self._state = TurnState.COMPLETED
             if self._current_turn:
                 self._current_turn.state = TurnState.COMPLETED
                 self._current_turn.completed_at = time.time()
-                self._current_turn.assistant_output = output
+                self._current_turn.output = output
                 self._history.append(self._current_turn)
             record = self._current_turn
             self._current_turn = None
@@ -128,7 +152,7 @@ class TurnLock:
                 "state": t.state.value,
                 "duration": t.duration(),
                 "user_input": t.user_input[:100],
-                "has_output": bool(t.assistant_output),
+                "has_output": bool(t.output),
             }
             for t in self._history[-limit:]
         ]
@@ -136,5 +160,7 @@ class TurnLock:
     def reset(self) -> None:
         """强制重置（用于异常恢复）。"""
         with self._lock:
+            if self._current_turn is not None and self._current_turn.error:
+                self._history.append(self._current_turn)
             self._state = TurnState.IDLE
             self._current_turn = None

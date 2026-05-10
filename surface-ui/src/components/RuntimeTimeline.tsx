@@ -1,8 +1,21 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useMemo, useState } from 'react'
 import type { TimelineEvent } from '../api/chat'
 import TimelineEventCard from './TimelineEvent'
 import ToolCallCard from './ToolCallCard'
 import StreamStatus from './StreamStatus'
+import { cognitiveStateColor } from '../theme/runtime-colors'
+
+const COGNITIVE_ICONS: Record<string, string> = {
+  understanding: '🧠',
+  analyzing: '🔍',
+  evaluating: '⚖️',
+  planning: '📋',
+  selecting: '🔧',
+  executing: '⚡',
+  verifying: '✓',
+  summarizing: '💾',
+  completed: '✅',
+}
 
 interface Props {
   events: TimelineEvent[]
@@ -13,6 +26,7 @@ interface Props {
 
 export default function RuntimeTimeline({ events, wsStatus, isRunning, maxHeight }: Props) {
   const listRef = useRef<HTMLDivElement>(null)
+  const [debugMode, setDebugMode] = useState(false)
 
   useEffect(() => {
     if (listRef.current) {
@@ -22,6 +36,21 @@ export default function RuntimeTimeline({ events, wsStatus, isRunning, maxHeight
 
   const grouped = groupEvents(events)
 
+  const currentCognitive = useMemo(() => {
+    for (let i = events.length - 1; i >= 0; i--) {
+      const ev = events[i]
+      if (ev.cognitive_label && ev.cognitive_state) {
+        return {
+          label: ev.cognitive_label,
+          state: ev.cognitive_state,
+          icon: COGNITIVE_ICONS[ev.cognitive_state] ?? '🧠',
+          color: cognitiveStateColor[ev.cognitive_state] ?? '#6B7280',
+        }
+      }
+    }
+    return null
+  }, [events])
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -30,7 +59,19 @@ export default function RuntimeTimeline({ events, wsStatus, isRunning, maxHeight
           <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
             Runtime
           </h3>
-          <StreamStatus status={wsStatus} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDebugMode(!debugMode)}
+              className={`text-[10px] px-2 py-0.5 rounded font-mono transition-colors ${
+                debugMode
+                  ? 'bg-accent-blue/20 text-accent-blue/80'
+                  : 'text-text-muted/50 hover:text-text-muted/70'
+              }`}
+            >
+              {debugMode ? '[debug on]' : '[debug]'}
+            </button>
+            <StreamStatus status={wsStatus} />
+          </div>
         </div>
         {isRunning && (
           <div className="mt-1.5 h-0.5 bg-surface-700/50 rounded-full overflow-hidden">
@@ -38,6 +79,25 @@ export default function RuntimeTimeline({ events, wsStatus, isRunning, maxHeight
           </div>
         )}
       </div>
+
+      {/* Thinking Status Bar — shown when system is running and cognitive state is available */}
+      {isRunning && currentCognitive && (
+        <div className="shrink-0 px-4 py-2 border-b border-surface-700/30 bg-surface-800/40">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">{currentCognitive.icon}</span>
+            <span
+              className="text-xs font-semibold tracking-wide animate-pulse"
+              style={{ color: currentCognitive.color }}
+            >
+              {currentCognitive.label}
+            </span>
+            <span
+              className="inline-block w-2 h-2 rounded-full animate-pulse ml-auto"
+              style={{ backgroundColor: currentCognitive.color }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Event list */}
       <div
@@ -58,7 +118,7 @@ export default function RuntimeTimeline({ events, wsStatus, isRunning, maxHeight
             if (item.type === 'tool_group') {
               return <ToolCallCard key={`tool-${i}`} events={item.events} />
             }
-            return <TimelineEventCard key={`evt-${i}`} event={item.event} />
+            return <TimelineEventCard key={`evt-${i}`} event={item.event} debug={debugMode} />
           })}
         </div>
       </div>

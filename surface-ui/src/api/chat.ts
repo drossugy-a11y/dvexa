@@ -22,6 +22,8 @@ export interface TimelineEvent {
   reason?: string
   content?: string
   timestamp?: string
+  cognitive_state?: string
+  cognitive_label?: string
   metadata?: Record<string, unknown>
 }
 

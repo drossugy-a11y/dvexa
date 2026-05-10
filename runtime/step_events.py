@@ -38,6 +38,8 @@ class RuntimeStep:
     step_id: str = ""
     timestamp: float = 0.0
     runtime_state: str = ""
+    cognitive_state: str = ""
+    cognitive_label: str = ""
     metadata: dict = field(default_factory=dict)
 
     def __post_init__(self):
@@ -53,12 +55,15 @@ class RuntimeStep:
             "content": self.content,
             "timestamp": self.timestamp,
             "runtime_state": self.runtime_state,
+            "cognitive_state": self.cognitive_state,
+            "cognitive_label": self.cognitive_label,
             "metadata": self.metadata,
         }
 
 
 def make_step(step_type: StepType, title: str = "",
               content: str = "", runtime_state: str = "",
+              cognitive_state: str = "", cognitive_label: str = "",
               metadata: dict | None = None) -> RuntimeStep:
     """便捷工厂函数。"""
     return RuntimeStep(
@@ -66,5 +71,7 @@ def make_step(step_type: StepType, title: str = "",
         title=title,
         content=content,
         runtime_state=runtime_state,
+        cognitive_state=cognitive_state,
+        cognitive_label=cognitive_label,
         metadata=metadata or {},
     )

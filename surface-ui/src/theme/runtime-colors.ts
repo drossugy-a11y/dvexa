@@ -57,6 +57,20 @@ export const statusColor: Record<string, string> = {
   disconnected: color.semantic.danger,
 }
 
+/* Cognitive 状态 → 颜色映射 */
+export const cognitiveStateColor: Record<string, string> = {
+  understanding: '#7C9EFF',
+  analyzing: '#A78BFA',
+  evaluating: '#FBBF24',
+  planning: '#60A5FA',
+  selecting: '#34D399',
+  executing: '#F472B6',
+  verifying: '#FBBF24',
+  summarizing: '#60A5FA',
+  completed: '#34D399',
+  processing: '#6B7280',
+}
+
 /* WS 连接状态 */
 export const wsStatusColor: Record<string, string> = {
   connected: color.semantic.success,
