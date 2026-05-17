@@ -10,6 +10,7 @@ const links = [
   { to: '/execution', label: '执行时间线', icon: '▶' },
   { to: '/assimilation', label: '同化中心', icon: '◴' },
   { to: '/console', label: '控制台', icon: '〉' },
+  { to: '/intelligence', label: '智能分析', icon: '◉' },
 ]
 
 export default function Navbar() {

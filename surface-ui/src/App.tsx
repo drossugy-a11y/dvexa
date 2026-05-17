@@ -7,6 +7,7 @@ import GovernancePanel from './pages/GovernancePanel'
 import ExecutionTimeline from './pages/ExecutionTimeline'
 import AssimilationCenter from './pages/AssimilationCenter'
 import RuntimeConsole from './pages/RuntimeConsole'
+import IntelligencePanel from './pages/IntelligencePanel'
 
 export default function App() {
   const location = useLocation()
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/execution" element={<ExecutionTimeline />} />
           <Route path="/assimilation" element={<AssimilationCenter />} />
           <Route path="/console" element={<RuntimeConsole />} />
+          <Route path="/intelligence" element={<IntelligencePanel />} />
         </Routes>
       </main>
     </div>

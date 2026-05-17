@@ -31,13 +31,15 @@ class UnifiedRuntimeLoop:
     def __init__(self, kernel: Any, directive_engine: Any = None,
                  governance_kernel: Any = None,
                  state_machine: RuntimeStateMachine | None = None,
-                 step_streamer: StepStreamer | None = None):
+                 step_streamer: StepStreamer | None = None,
+                 persona_kernel: Any = None):
         self._kernel = kernel
         self._directive_engine = directive_engine
         self._governance_kernel = governance_kernel
         self._sm = state_machine or RuntimeStateMachine()
         self._streamer = step_streamer or StepStreamer(self._sm)
         self._turn_lock = TurnLock()
+        self._persona_kernel = persona_kernel
         self._total_turns = 0
         self._kernel_result: dict = {}
         self._last_input: str = ""
@@ -71,6 +73,7 @@ class UnifiedRuntimeLoop:
 
         try:
             self._phase_directive(user_input, context, turn)
+            self._phase_persona()  # 注入 runtime identity
             self._phase_governance(user_input)
             self._phase_planning()
             self._phase_execute()
@@ -81,6 +84,8 @@ class UnifiedRuntimeLoop:
 
             self._turn_lock.complete_turn(output)
             self._sm.complete_turn()
+            if self._persona_kernel:
+                self._persona_kernel.reset()
 
             return {
                 "output": output,
@@ -192,6 +197,8 @@ class UnifiedRuntimeLoop:
         turn.error = str(e)
         self._streamer.error(title="Runtime error", content=str(e))
         self._turn_lock.reset()
+        if self._persona_kernel:
+            self._persona_kernel.reset()
         return {
             "output": f"Loop error: {e}",
             "turn": turn.to_dict(),
@@ -199,6 +206,26 @@ class UnifiedRuntimeLoop:
             "error": str(e),
             "steps": self._streamer.get_steps_dict(),
         }
+
+    def _phase_persona(self) -> None:
+        """PHASE 1.5: PERSONA — 注入运行时身份到 LLM 工具。
+
+        根据 directive 结果选择 persona profile，
+        在 LLM call 边界强制注入系统级身份声明。
+        """
+        if self._persona_kernel is None:
+            return
+        turn = self._turn_lock.current_turn
+        if turn is None:
+            return
+        self._persona_kernel.set_for_task(turn.directive)
+        persona_prompt = self._persona_kernel.get_system_prompt()
+        # 通过 kernel.executor.agent.llm_tool 注入到 LLM 调用边界
+        executor = getattr(self._kernel, 'executor', None)
+        agent = getattr(executor, 'agent', None) if executor else None
+        llm_tool = getattr(agent, 'llm_tool', None) if agent else None
+        if llm_tool is not None:
+            llm_tool.set_runtime_persona(persona_prompt)
 
     def _record_phase(self, phase: str) -> None:
         """记录阶段执行时间到当前 turn。"""

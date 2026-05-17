@@ -75,3 +75,57 @@ export function getMetrics(): Promise<ApiResponse<Record<string, unknown>>> {
 export function getExecution(): Promise<ApiResponse<unknown[]>> {
   return fetchJson('/surface/execution')
 }
+
+// ─── Intelligence API ────────────────────────────────────────────────────
+
+export interface IntelligenceReport {
+  status: string
+  report?: {
+    total_traces: number
+    success_count: number
+    failure_count: number
+    avg_duration_ms: number
+    retry_rate: number
+    governance_block_rate: number
+    stage_durations?: Record<string, number>
+    strategy_distribution?: Record<string, number>
+    mode_distribution?: Record<string, number>
+    error_types?: Record<string, number>
+  }
+}
+
+export interface FailurePatternData {
+  pattern_type: string
+  severity: number
+  description: string
+  suggestion?: string
+  trace_ids: string[]
+}
+
+export interface CognitiveProfile {
+  planning_ratio: number
+  execution_ratio: number
+  tool_ratio: number
+  classification: string
+}
+
+export async function getIntelligenceReport(): Promise<IntelligenceReport> {
+  const res = await fetch('/surface/intelligence/report')
+  return res.json()
+}
+
+export async function getFailurePatterns(): Promise<{
+  status: string
+  patterns: FailurePatternData[]
+}> {
+  const res = await fetch('/surface/intelligence/patterns')
+  return res.json()
+}
+
+export async function getCognitiveProfile(): Promise<{
+  status: string
+  profile: CognitiveProfile
+}> {
+  const res = await fetch('/surface/intelligence/cognitive')
+  return res.json()
+}
