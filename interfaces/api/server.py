@@ -150,3 +150,103 @@ def run_analysis():
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Phase 3: 新增端点 ─────────────────────────────────
+
+import threading
+from core.engine.orchestrator import Orchestrator
+from core.memory.store import AnalysisMemory
+
+orchestrator = Orchestrator()
+memory = AnalysisMemory()
+
+# 后台扫描状态
+_scan_status = {}
+
+
+class ScanRequest(BaseModel):
+    depth: Optional[int] = 3
+
+
+class ConfirmRequest(BaseModel):
+    scan_id: str
+    confirmed_tickers: list[str]
+
+
+@app.post("/api/scan")
+def start_scan(req: ScanRequest):
+    """触发新一轮扫描（后台运行）"""
+    scan_id = f"scan_{len(_scan_status) + 1}"
+
+    def _run():
+        try:
+            _scan_status[scan_id] = {"status": "running", "progress": [], "result": None}
+            result = orchestrator.run_daily_scan(
+                progress_callback=lambda msg: _scan_status[scan_id]["progress"].append(msg)
+            )
+            _scan_status[scan_id]["status"] = "done"
+            _scan_status[scan_id]["result"] = result
+        except Exception as e:
+            _scan_status[scan_id]["status"] = "failed"
+            _scan_status[scan_id]["error"] = str(e)
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+    return {"scan_id": scan_id, "status": "running"}
+
+
+@app.get("/api/scan/{scan_id}")
+def get_scan(scan_id: str):
+    """查询扫描结果"""
+    if scan_id in _scan_status:
+        return _scan_status[scan_id]
+    # 从数据库查找
+    result = memory.get_scan(scan_id)
+    if result:
+        return {"status": "done", "result": result}
+    raise HTTPException(status_code=404, detail="Scan not found")
+
+
+@app.get("/api/regime")
+def get_regime():
+    """获取当前市场状态"""
+    try:
+        regime = orchestrator.regime_detector.detect()
+        return regime
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/pending")
+def get_pending():
+    """获取待确认的选股结果"""
+    scans = memory.get_recent_scans(1)
+    if not scans:
+        return {"scan_id": None, "decisions": []}
+    latest = memory.get_scan(scans[0]['scan_id'])
+    if not latest:
+        return {"scan_id": None, "decisions": []}
+    return {
+        "scan_id": latest.get('scan_id'),
+        "decisions": latest.get('decisions', []),
+    }
+
+
+@app.post("/api/confirm")
+def confirm_trade(req: ConfirmRequest):
+    """确认下单"""
+    confirmed = []
+    skipped = []
+    for ticker in req.confirmed_tickers:
+        memory.confirm_trade(ticker, req.scan_id)
+        confirmed.append(ticker)
+    return {"status": "confirmed", "confirmed": confirmed, "skipped": skipped}
+
+
+@app.get("/api/history")
+def get_history():
+    """获取扫描历史"""
+    scans = memory.get_recent_scans(20)
+    return {"scans": scans}

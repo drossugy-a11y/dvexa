@@ -15,9 +15,14 @@ class StrategyEngine:
         self.detector = RegimeDetector()
         self.strategies_dir = os.path.join(os.path.dirname(__file__), 'configs')
     
-    def detect_regime(self) -> str:
-        """检测市场状态"""
+    def detect_regime(self) -> dict:
+        """检测市场状态（返回完整结果）"""
         return self.detector.detect()
+
+    def detect_regime_simple(self) -> str:
+        """检测市场状态（仅返回字符串）"""
+        result = self.detector.detect()
+        return result.get('regime', 'shock')
     
     def load_strategy(self, regime: str) -> dict:
         """加载对应策略配置"""

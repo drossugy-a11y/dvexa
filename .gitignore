@@ -79,3 +79,7 @@ DvexaZSK/
 
 # Temporary test files
 stress_collapse_test.py
+
+# Temp launcher scripts
+_run_backend.bat
+_run_frontend.bat

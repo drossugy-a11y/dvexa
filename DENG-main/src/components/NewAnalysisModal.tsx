@@ -72,6 +72,7 @@ export default function NewAnalysisModal({
     }
 
     // Fallback: simulated analysis (original logic)
+    const timer1 = setTimeout(() => {
     setAnalysisProgress(30);
     setProgressMsg('解算历史五维量能波动矩阵 (动量/成长/估值/质量)...');
     }, 500);

@@ -1,0 +1,927 @@
+直接贴给你，整段复制：
+
+---
+
+# DVexa 改造执行提示词
+
+## 你的身份
+
+你是 DVexa 项目的开发工程师。你的任务是将一个现有的 A 股五维评分研究工具，改造成一个**AI 选股半自动量化系统**。
+
+## 项目背景
+
+**DVexa** 是一个 A 股 AI 选股研究终端，当前已有：
+- React 前端（奢华暗金 UI）
+- FastAPI 后端
+- 五维评分系统（成长性/盈利/估值/财务健康/质量）
+- akshare 真实数据 + SQLite 缓存
+- 策略引擎骨架（有目录和配置，但逻辑未填充）
+- Agent 目录结构（有目录，但内容为空壳）
+
+**目标系统**：因子选股 → AI 深度研究分析 → 人工确认下单 → 中线策略 → 根据市场状态（牛市/熊市/震荡）自动切换策略形态。
+
+## 核心约束（必须遵守）
+
+1. **不修改 `stock_radar/` 目录下的任何现有文件** — 它是原始 MVP，通过新模块叠加改造
+2. **不修改 `vendor/TradingAgents-CN/` 中的任何文件** — 通过 wrapper 调用，方便后续同步上游更新
+3. **不引入重型量化框架**（如 backtrader、zipline）— 保持轻量
+4. **AI 只做研究分析，不做自动交易** — 最终下单由人工确认
+5. **每个 Task 完成后必须能正常 import，无语法错误**
+6. **每完成一个 Phase，输出一次进度摘要**
+
+## 技术栈
+
+- Python 3.10+
+- FastAPI + Uvicorn
+- React 19 + Vite（前端）
+- akshare（A 股数据）
+- SQLite（缓存）
+- LLM：DeepSeek / 通义千问（通过 OpenAI 兼容接口）
+- TradingAgents-CN（多 Agent 深度分析框架，作为子模块引入）
+
+## 项目仓库
+
+- DVexa: `https://github.com/drossugy-a11y/dvexa`
+- TradingAgents-CN: `https://github.com/hsliuping/TradingAgents-CN`
+
+---
+
+## 执行计划（按顺序逐 Task 执行）
+
+---
+
+### Phase 0: 环境准备 + TradingAgents-CN 接入
+
+---
+
+#### Task 0.1: 克隆 TradingAgents-CN 为 git submodule
+
+**操作**：
+```bash
+cd /path/to/dvexa
+mkdir -p vendor
+git submodule add https://github.com/hsliuping/TradingAgents-CN.git vendor/TradingAgents-CN
+```
+
+**完成后验证**：`vendor/TradingAgents-CN/tradingagents/` 目录存在
+
+---
+
+#### Task 0.2: 创建 TradingAgents-CN Wrapper
+
+**新建文件**：`integrations/__init__.py`（空文件）和 `integrations/trading_agents_wrapper.py`
+
+**要求**：
+- 动态将 `vendor/TradingAgents-CN` 添加到 `sys.path`
+- 封装 `TradingAgentsGraph` 的调用
+- 从 `.env` 读取 LLM 配置（`LLM_PROVIDER`、`LLM_MODEL`、`LLM_API_KEY`）
+- 支持 DeepSeek 和通义千问（DashScope）两种 provider
+- 统一输出格式为 dict，包含：`ticker`、`name`、`decision`、`confidence`、`risk_score`、`analysis`(technical/fundamental/news/sentiment 四个文本字段)、`debate`(bull_argument/bear_argument/verdict)、`raw_report`
+- 包含错误处理：LLM 调用失败时返回降级结果（只有基础数据，analysis 字段标记为"分析失败"）
+- 包含一个 `is_available()` 方法检查 wrapper 是否可正常工作
+
+**关键代码结构**：
+```python
+import sys, os
+
+# 添加 vendor 路径
+VENDOR_PATH = os.path.join(os.path.dirname(__file__), '..', 'vendor', 'TradingAgents-CN')
+sys.path.insert(0, os.path.abspath(VENDOR_PATH))
+
+class TradingAgentsWrapper:
+    def __init__(self):
+        # 读取 .env 配置
+        # 初始化 LLM provider
+        # 尝试导入 tradingagents，失败则标记为不可用
+        pass
+    
+    def is_available(self) -> bool:
+        """检查 wrapper 是否可用"""
+        pass
+    
+    def analyze(self, ticker: str, market: str = 'A', depth: int = 3) -> dict:
+        """
+        调用 TradingAgents-CN 分析单只股票
+        
+        Args:
+            ticker: 股票代码，如 '000001'、'600519'
+            market: 'A' / 'HK' / 'US'
+            depth: 分析深度 1-5
+        
+        Returns:
+            {
+                'ticker': str,
+                'name': str,
+                'decision': 'buy' | 'hold' | 'sell',
+                'confidence': float,  # 0-1
+                'risk_score': float,  # 0-100
+                'analysis': {
+                    'technical': str,
+                    'fundamental': str,
+                    'news': str,
+                    'sentiment': str,
+                },
+                'debate': {
+                    'bull_argument': str,
+                    'bear_argument': str,
+                    'verdict': str,
+                },
+                'raw_report': str,
+            }
+        """
+        pass
+```
+
+**注意**：先阅读 `vendor/TradingAgents-CN` 的源码，理解 `TradingAgentsGraph` 的实际接口和返回格式，再写 wrapper。不要凭猜测写。
+
+---
+
+#### Task 0.3: 统一配置管理
+
+**修改文件**：`config/settings.py`
+
+在现有配置基础上新增：
+```python
+import os
+
+# === LLM 配置 ===
+LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'deepseek')
+LLM_MODEL = os.getenv('LLM_MODEL', 'deepseek-chat')
+LLM_API_KEY = os.getenv('LLM_API_KEY', '')
+LLM_BASE_URL = os.getenv('LLM_BASE_URL', '')  # 自定义端点
+
+# === TradingAgents-CN 配置 ===
+TA_DEPTH = int(os.getenv('TA_DEPTH', '3'))
+TA_MARKET = os.getenv('TA_MARKET', 'A')
+
+# === 通知配置 ===
+NOTIFY_CHANNEL = os.getenv('NOTIFY_CHANNEL', 'console')  # telegram / wechat / console
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
+
+# === 调度配置 ===
+SCAN_HOUR = int(os.getenv('SCAN_HOUR', '15'))
+SCAN_MINUTE = int(os.getenv('SCAN_MINUTE', '30'))
+```
+
+**修改文件**：`.env.example` — 在现有内容基础上追加上述所有新环境变量的示例值和注释
+
+---
+
+#### Task 0.4: 更新 requirements.txt
+
+**修改文件**：`requirements.txt`
+
+在现有内容末尾追加（不要删除已有内容）：
+```
+langchain>=0.3.0
+langgraph>=0.2.0
+langchain-openai>=0.2.0
+schedule>=1.2.0
+requests>=2.31.0
+apscheduler>=3.10.0
+```
+
+---
+
+### Phase 1: 因子引擎升级
+
+---
+
+#### Task 1.1: 扩展因子库
+
+**修改文件**：`agents/analysis/factor_calc.py`
+
+**现有代码**：只有 5 个基本面因子（growth/profitability/valuation/health/quality），且 valuation 和 quality 是空实现（直接返回 50 分）。
+
+**改造要求**：
+1. 保留现有 5 个基本面因子的计算逻辑
+2. 新增技术因子计算方法（需要接收行情数据作为参数）：
+   - `momentum_20d`：20 日涨幅，映射到 0-100 分（涨幅 >20% 得 90 分，0-20% 线性映射，<0% 得 30 分）
+   - `momentum_60d`：60 日涨幅，同上
+   - `ma_trend`：均线多头排列得分（MA5>MA10>MA20>MA60 每满足一个+25 分）
+   - `volume_trend`：近 5 日均量 / 近 20 日均量，>1.5 得 80 分，1.0-1.5 线性，<1.0 得 40 分
+   - `rsi_score`：14 日 RSI，30-70 区间得 80 分，超买(>70)或超卖(<30)得 40 分
+3. 补充估值因子实现：
+   - `pe_score`：PE < 15 得 90 分，15-30 得 60 分，>30 得 30 分，>100 得 10 分
+   - `pb_score`：PB < 1.5 得 90 分，1.5-3 得 60 分，>3 得 30 分
+   - `dividend_yield`：股息率 >5% 得 90 分，3-5% 得 70 分，1-3% 得 50 分，<1% 得 30 分
+4. 修改 `calculate` 方法的签名，增加 `market_data: dict` 参数（包含 close_prices、volumes 等行情数据）
+5. 返回格式改为嵌套结构：
+
+```python
+def calculate(self, financial_data: dict, market_data: dict = None) -> dict:
+    """
+    Args:
+        financial_data: {'indicators': {...}}  # 财务数据
+        market_data: {
+            'close_prices': list[float],  # 近60日收盘价
+            'volumes': list[float],       # 近60日成交量
+            'current_price': float,
+            'pe': float,
+            'pb': float,
+            'dividend_yield': float,
+        }
+    
+    Returns:
+        {
+            'fundamental': {
+                'growth': float,
+                'profitability': float,
+                'valuation': float,
+                'health': float,
+                'quality': float,
+            },
+            'technical': {
+                'momentum_20d': float,
+                'momentum_60d': float,
+                'ma_trend': float,
+                'volume_trend': float,
+                'rsi_score': float,
+            },
+            'valuation_scores': {
+                'pe_score': float,
+                'pb_score': float,
+                'dividend_yield': float,
+            },
+            'total_score': float,
+        }
+    """
+```
+
+**重要**：先读取现有 `factor_calc.py` 的完整代码，理解后再修改。不要重写整个文件，在现有基础上扩展。
+
+---
+
+#### Task 1.2: 增强市场状态检测器
+
+**修改文件**：`strategies/regime/detector.py`
+
+**现有代码**：只用沪深 300 的 MA20/MA60 关系判断，返回 'bull'/'bear'/'shock'。
+
+**改造要求**：
+1. 保留现有逻辑作为 `trend_score` 的一部分
+2. 新增 3 个检测维度，每个维度 0-100 分：
+
+**趋势维度（40% 权重）**：
+- MA20/MA60 关系（现有逻辑）
+- MA60 斜率：用近 10 日的 MA60 值算斜率，上升>0.5% 得 80 分，下降<-0.5% 得 20 分
+- 偏离度：当前价距 MA60 的百分比，偏离>+15% 扣分（过热），<-15% 也扣分（过冷）
+
+**动量维度（30% 权重）**：
+- 沪深 300 近 20 日涨幅
+- 用 akshare 获取涨跌家数数据（如果可用，不可用则跳过）
+
+**波动维度（15% 权重）**：
+- 20 日波动率（日收益率标准差年化）
+- 波动率 <15% 正常得 70 分，>30% 高波动得 40 分
+
+**情绪维度（15% 权重）**：
+- 近 5 日成交量 vs 近 20 日成交量（放量/缩量趋势）
+
+3. 综合分 = 4 个维度加权平均
+4. 判定规则：>70 → 'bull'，<30 → 'bear'，其他 → 'shock'
+5. 返回格式增强：
+
+```python
+def detect(self) -> dict:
+    """
+    Returns:
+        {
+            'regime': 'bull' | 'bear' | 'shock',
+            'score': float,  # 0-100 综合分
+            'confidence': float,  # 置信度（各维度一致性）
+            'details': {
+                'trend_score': float,
+                'momentum_score': float,
+                'volatility_score': float,
+                'sentiment_score': float,
+            },
+            'indicators': {
+                'ma20': float,
+                'ma60': float,
+                'current_price': float,
+                'volatility_20d': float,
+                'momentum_20d': float,
+            }
+        }
+    """
+```
+
+6. 修改 `strategies/engine.py` 中调用 `detect()` 的地方，适配新的返回格式（原来是返回字符串，现在返回 dict）
+
+**重要**：先读取 `strategies/regime/detector.py` 和 `strategies/engine.py` 的完整代码，理解数据源接口（`data.market.akshare_feed`）后再改。
+
+---
+
+#### Task 1.3: 填充策略配置 YAML
+
+**修改文件**：以下 3 个 YAML 文件
+
+**`strategies/configs/aggressive.yaml`（牛市）**：
+```yaml
+name: "牛市进攻策略"
+regime: bull
+description: "趋势向上时，追涨强势股，集中持仓"
+
+filters:
+  st_exclude: true
+  min_market_cap: 5000000000
+  min_volume_20d: 50000000
+  momentum_20d_min: 10
+  ma_trend_min: 60
+  total_score_min: 70
+
+scoring:
+  weights:
+    momentum_20d: 0.25
+    momentum_60d: 0.15
+    ma_trend: 0.15
+    growth: 0.15
+    profitability: 0.10
+    volume_trend: 0.10
+    pe_score: 0.05
+    quality: 0.05
+
+output:
+  top_n: 15
+  min_score: 70
+  max_position_pct: 0.15
+
+analysis:
+  ta_depth: 4
+  focus: "动量突破、行业龙头、趋势延续"
+  prompt_hint: "当前处于牛市环境。重点关注趋势延续性强、动量充足的股票。"
+```
+
+**`strategies/configs/balanced.yaml`（震荡市）**：
+```yaml
+name: "震荡均衡策略"
+regime: shock
+description: "区间震荡，高抛低吸，分散持仓"
+
+filters:
+  st_exclude: true
+  min_market_cap: 3000000000
+  min_volume_20d: 30000000
+  rsi_low: 35
+  pe_score_min: 50
+  health_min: 60
+  total_score_min: 65
+
+scoring:
+  weights:
+    pe_score: 0.20
+    health: 0.15
+    quality: 0.15
+    profitability: 0.15
+    growth: 0.10
+    dividend_yield: 0.10
+    rsi_score: 0.10
+    momentum_20d: 0.05
+
+output:
+  top_n: 20
+  min_score: 65
+  max_position_pct: 0.08
+
+analysis:
+  ta_depth: 3
+  focus: "均值回归、低吸机会、高股息防御"
+  prompt_hint: "当前处于震荡市。重点关注估值合理、有安全边际的股票。"
+```
+
+**`strategies/configs/defensive.yaml`（熊市）**：
+```yaml
+name: "熊市防御策略"
+regime: bear
+description: "防守为主，低仓位，高股息，等底部信号"
+
+filters:
+  st_exclude: true
+  min_market_cap: 10000000000
+  min_volume_20d: 100000000
+  dividend_yield_min: 3
+  debt_ratio_max: 50
+  health_min: 75
+  total_score_min: 75
+
+scoring:
+  weights:
+    health: 0.25
+    dividend_yield: 0.20
+    quality: 0.20
+    pe_score: 0.15
+    profitability: 0.10
+    growth: 0.05
+    momentum_20d: 0.05
+
+output:
+  top_n: 8
+  min_score: 75
+  max_position_pct: 0.10
+
+analysis:
+  ta_depth: 5
+  focus: "防御性、现金流、高股息、底部信号"
+  prompt_hint: "当前处于熊市环境。以防御为主，重点关注高股息、低负债的白马股。"
+```
+
+同时**修改 `strategies/engine.py`** 中的 `load_strategy` 方法，使其能正确读取 YAML 中新增的字段（`scoring.weights`、`analysis` 等），并传递给下游。
+
+---
+
+### Phase 2: Agent 协作层
+
+---
+
+#### Task 2.1: 实现研究 Agent（看涨/看跌辩论）
+
+**新建文件**：`agents/research/__init__.py`（如果不存在）和 `agents/research/debate.py`
+
+**要求**：
+- 使用 LLM（通过 OpenAI 兼容接口）进行看涨/看跌辩论
+- 输入：股票数据 dict、因子评分 dict、市场状态字符串
+- 流程：
+  1. 构造看涨 prompt：让 LLM 从技术面、基本面、行业趋势角度论证为什么应该买
+  2. 构造看跌 prompt：让 LLM 从风险、估值、下行因素论证为什么不应该买
+  3. 构造裁判 prompt：让 LLM 综合两方观点，给出裁决
+- 使用 `config/settings.py` 中的 LLM 配置
+- 每个 LLM 调用都要有超时处理（30 秒）和错误降级
+- 辩论结果缓存到内存（同一天同一只股票不重复调用）
+
+**输出格式**：
+```python
+@dataclass
+class DebateResult:
+    ticker: str
+    bull_argument: str
+    bear_argument: str
+    bull_score: float      # 0-100，LLM 给出
+    bear_score: float      # 0-100
+    verdict: str           # 'bull_win' | 'bear_win' | 'neutral'
+    confidence: float      # 0-1
+    key_factors: list[str] # LLM 提取的关键判断因子
+```
+
+**LLM 调用方式**：使用 `openai` 库，通过 `LLM_BASE_URL` + `LLM_API_KEY` 调用。如果 `LLM_PROVIDER` 是 `dashscope`，base_url 设为 `https://dashscope.aliyuncs.com/compatible-mode/v1`。如果是 `deepseek`，base_url 设为 `https://api.deepseek.com`。
+
+---
+
+#### Task 2.2: 实现交易决策 Agent
+
+**新建文件**：`agents/trading/__init__.py`（如果不存在）和 `agents/trading/decision.py`
+
+**要求**：
+- 输入：辩论结果列表、市场状态、策略配置
+- 逻辑（规则 + LLM 辅助）：
+  1. **规则层**：根据辩论裁决 + 因子总分 + 市场状态，初步确定 action
+     - 牛市 + bull_win + 总分>80 → 'buy'，confidence 0.8+
+     - 熊市 + bear_win → 'sell' 或 'watch'
+     - 震荡市 + neutral → 'watch'
+  2. **LLM 辅助**：对规则层结果，让 LLM 给出调仓建议、目标价、止损价
+  3. **风控**：根据市场状态限制最大仓位
+     - 牛市：单只最大 15%，总仓位最大 80%
+     - 震荡：单只最大 8%，总仓位最大 60%
+     - 熊市：单只最大 5%，总仓位最大 30%
+
+**输出格式**：
+```python
+@dataclass
+class TradeDecision:
+    ticker: str
+    name: str
+    action: str           # 'buy' | 'hold' | 'sell' | 'watch'
+    confidence: float     # 0-1
+    target_pct: float     # 建议仓位比例
+    entry_price: float    # 建议入场价
+    stop_loss: float      # 止损价（入场价的 -7% 到 -10%）
+    take_profit: float    # 止盈价（入场价的 +15% 到 +25%）
+    holding_weeks: int    # 建议持仓周数（4-12 周）
+    reason: str           # 决策理由摘要（一句话）
+    risk_level: str       # 'low' | 'medium' | 'high'
+```
+
+---
+
+#### Task 2.3: 实现记忆模块
+
+**新建文件**：`core/__init__.py`（如果不存在）、`core/memory/__init__.py` 和 `core/memory/store.py`
+
+**要求**：
+- 使用 SQLite 存储
+- 数据库文件：`data/dvexa_memory.db`
+- 表设计：
+
+```sql
+CREATE TABLE IF NOT EXISTS analysis_cache (
+    ticker TEXT NOT NULL,
+    date TEXT NOT NULL,
+    result_json TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (ticker, date)
+);
+
+CREATE TABLE IF NOT EXISTS scan_history (
+    scan_id TEXT PRIMARY KEY,
+    regime TEXT,
+    strategy_name TEXT,
+    candidates_json TEXT,
+    decisions_json TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS regime_history (
+    date TEXT PRIMARY KEY,
+    regime TEXT,
+    score REAL,
+    details_json TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS trade_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scan_id TEXT,
+    ticker TEXT,
+    action TEXT,
+    confirmed BOOLEAN DEFAULT FALSE,
+    confirmed_at TIMESTAMP,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**对外接口**：
+```python
+class AnalysisMemory:
+    def __init__(self, db_path: str = 'data/dvexa_memory.db')
+    def get_cached_analysis(self, ticker: str) -> dict | None
+    def cache_analysis(self, ticker: str, result: dict) -> None
+    def save_scan(self, scan_id: str, result: dict) -> None
+    def get_scan(self, scan_id: str) -> dict | None
+    def get_recent_scans(self, limit: int = 10) -> list
+    def save_regime(self, date: str, regime: str, score: float, details: dict) -> None
+    def get_regime_history(self, days: int = 30) -> list
+    def log_trade(self, scan_id: str, ticker: str, action: str) -> None
+    def confirm_trade(self, ticker: str, scan_id: str) -> None
+```
+
+---
+
+#### Task 2.4: 实现主控编排器
+
+**新建文件**：`core/engine/__init__.py`（如果不存在）和 `core/engine/orchestrator.py`
+
+**这是整个系统的核心，串联所有模块。**
+
+**要求**：
+
+```python
+class Orchestrator:
+    """
+    主控编排器
+    
+    依赖（在 __init__ 中初始化）：
+      - RegimeDetector（strategies/regime/detector.py）
+      - StrategyEngine（strategies/engine.py）
+      - FactorCalculator（agents/analysis/factor_calc.py）
+      - TradingAgentsWrapper（integrations/trading_agents_wrapper.py）
+      - StockDebater（agents/research/debate.py）
+      - TradeDecisionMaker（agents/trading/decision.py）
+      - AnalysisMemory（core/memory/store.py）
+    """
+    
+    def run_daily_scan(self) -> dict:
+        """
+        每日扫描主流程（完整 pipeline）：
+        
+        Step 1: 检测市场状态
+            regime_result = self.regime_detector.detect()
+            regime = regime_result['regime']
+        
+        Step 2: 加载策略配置
+            strategy_config = self.strategy_engine.load_strategy(regime)
+        
+        Step 3: 获取股票池
+            - 使用 akshare 获取沪深 A 股列表
+            - 剔除 ST、*ST
+            - 剔除上市不满 60 天的
+            - 剔除日均成交额低于策略配置 min_volume_20d 的
+            → stock_pool（约 2000-3000 只）
+        
+        Step 4: 因子计算 + 初步筛选
+            - 对每只股票调用 factor_calc.calculate(financial_data, market_data)
+            - 按策略配置的 scoring.weights 计算加权总分
+            - 按 filters 过滤
+            - 按 total_score 排序，取 Top 30
+            → candidates
+        
+        Step 5: 检查缓存，跳过已分析的
+            - 检查 memory 中是否有今日缓存
+            - 只对未缓存的调用 TradingAgents-CN
+        
+        Step 6: TradingAgents-CN 深度分析（对 Top 30 逐只分析）
+            - 调用 ta_wrapper.analyze(ticker, market, depth)
+            - 每只之间间隔 2 秒（避免 API 限流）
+            - 失败的跳过，不阻塞流程
+            → analysis_results
+        
+        Step 7: 研究员辩论
+            - 对每只股票调用 debater.debate(stock_data, factor_scores, regime)
+            → debate_results
+        
+        Step 8: 交易决策
+            - 调用 decision_maker.decide(debate_results, regime, strategy_config)
+            - 取 Top 10
+            → decisions
+        
+        Step 9: 保存结果
+            - 保存到 memory
+        
+        Step 10: 返回结果
+        """
+        pass
+    
+    def run_single_analysis(self, ticker: str) -> dict:
+        """单股深度分析（手动触发）"""
+        pass
+    
+    def get_status(self) -> dict:
+        """返回系统状态"""
+        pass
+```
+
+**重要实现细节**：
+- Step 3：使用 `ak.stock_zh_a_spot_em()` 获取实时行情，`ak.stock_info_a_code_name()` 获取名称
+- Step 4：使用 `ak.stock_financial_analysis_indicator(symbol=code)` 获取财务数据
+- Step 4：使用 `ak.stock_zh_a_hist(symbol=code, period='daily', start_date=..., end_date=...)` 获取近 60 日 K 线
+- akshare 已有 0.5s 限流，每只股票之间 `time.sleep(0.5)`
+- Step 6：只对 Top 10 调用完整 LLM 分析，Top 11-30 只用因子评分
+- 全流程要有进度日志输出
+
+---
+
+### Phase 3: 通知 + 人工确认 API
+
+---
+
+#### Task 3.1: 实现通知推送
+
+**新建文件**：`integrations/notifier.py`
+
+**要求**：
+- 支持 3 种渠道：Telegram Bot、企业微信机器人、控制台输出
+- 通过 `NOTIFY_CHANNEL` 配置选择
+- Telegram 使用 `requests` 直接调 Bot API
+- 企业微信使用 webhook
+- 推送内容格式化为可读文本（包含 emoji）
+
+**推送模板**：
+```
+📊 DVexa 每日选股报告 [{date}]
+
+📈 市场状态：{emoji} {regime} (置信度: {confidence}%)
+📋 策略：{strategy_name}
+
+🏆 Top {n} 推荐：
+{for each decision:}
+{rank}. {name}({ticker}) ⭐{score}分 | AI: {action} | 仓位:{pct}%
+   💡 {reason}
+   🎯 入场:{entry} 止损:{stop} 止盈:{take}
+   ⏱️ 持仓:{weeks}周 风险:{risk}
+```
+
+**接口**：
+```python
+class Notifier:
+    def __init__(self, channel: str = None)
+    def send(self, message: str) -> bool
+    def send_scan_report(self, scan_result: dict) -> bool
+    def send_alert(self, title: str, body: str) -> bool
+```
+
+---
+
+#### Task 3.2: 扩展 FastAPI 后端
+
+**修改文件**：`stock_radar/api.py`（在现有文件末尾追加新端点，不删除现有内容）
+
+**新增端点**：
+
+```python
+# POST /api/scan — 触发新一轮扫描
+# 请求体：{ "depth": 3 }
+# 响应：{ "scan_id": "...", "status": "running" }
+
+# GET /api/scan/{scan_id} — 查询扫描结果
+# 响应：{ "status": "running" | "done" | "failed", "result": {...} }
+
+# GET /api/regime — 获取当前市场状态
+# 响应：{ "regime": "bull", "score": 75, "details": {...} }
+
+# GET /api/pending — 获取待确认的选股结果
+# 响应：{ "scan_id": "...", "decisions": [...] }
+
+# POST /api/confirm — 确认下单
+# 请求体：{ "scan_id": "...", "confirmed_tickers": ["600519", "000858"] }
+# 响应：{ "status": "confirmed", "confirmed": [...], "skipped": [...] }
+
+# GET /api/history — 获取扫描历史
+# 响应：{ "scans": [...] }
+
+# GET /api/health — 健康检查
+# 响应：{ "status": "ok", "modules": {...} }
+```
+
+**实现注意**：
+- 扫描是耗时操作，必须用后台线程 + 内存中的状态字典跟踪进度
+- 使用 `import threading` 即可，不需要 Celery
+- 新端点追加在文件末尾，不修改现有端点
+
+---
+
+### Phase 4: 定时调度 + 一键启动
+
+---
+
+#### Task 4.1: 实现定时调度器
+
+**新建文件**：`core/scheduler/__init__.py` 和 `core/scheduler/scheduler.py` 和 `core/scheduler/__main__.py`
+
+**要求**：
+- 使用 `APScheduler`（`BackgroundScheduler`）
+- 调度任务：每日 15:30（可配置）执行扫描，完成后自动推送通知
+- 支持手动触发：`scheduler.trigger_scan()` 方法
+
+**`core/scheduler/__main__.py`**：
+```python
+"""python -m core.scheduler 启动调度器"""
+from core.scheduler.scheduler import Scheduler
+import signal, sys
+
+scheduler = Scheduler()
+
+def shutdown(sig, frame):
+    scheduler.stop()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, shutdown)
+signal.signal(signal.SIGTERM, shutdown)
+
+scheduler.start()
+print(f"调度器已启动，每日 {scheduler.scan_time} 执行扫描")
+print("按 Ctrl+C 停止")
+
+import threading
+threading.Event().wait()
+```
+
+---
+
+#### Task 4.2: 更新一键启动脚本
+
+**修改文件**：`start.bat`（覆盖现有内容）
+
+```bat
+@echo off
+chcp 65001 >nul
+echo ========================================
+echo   DVexa AI 选股系统 启动中...
+echo ========================================
+
+if not exist .env (
+    echo [ERROR] 未找到 .env 文件
+    echo 请复制 .env.example 为 .env 并配置 LLM_API_KEY
+    pause
+    exit /b 1
+)
+
+echo [1/5] 安装 TradingAgents-CN...
+cd vendor\TradingAgents-CN
+pip install -e . --quiet 2>nul
+cd ..\..
+
+echo [2/5] 安装项目依赖...
+pip install -r requirements.txt --quiet
+
+echo [3/5] 初始化数据库...
+python -c "from core.memory.store import AnalysisMemory; AnalysisMemory()"
+
+echo [4/5] 启动后端服务 (port 8000)...
+start /B cmd /c "cd stock_radar && python -m uvicorn api:app --host 0.0.0.0 --port 8000"
+
+echo [5/5] 启动前端界面 (port 3000)...
+cd DENG-main
+start /B cmd /c "npm run dev"
+cd ..
+
+echo.
+echo ========================================
+echo   启动完成！
+echo   前端: http://localhost:3000
+echo   后端: http://localhost:8000
+echo   API:  http://localhost:8000/docs
+echo   健康: http://localhost:8000/api/health
+echo ========================================
+
+timeout /t 3
+start http://localhost:3000
+pause
+```
+
+**新建文件**：`start.sh`（Linux/Mac 版本）
+
+---
+
+#### Task 4.3: 实现健康检查
+
+**新建文件**：`core/health.py`
+
+```python
+def check_health() -> dict:
+    """
+    检查：.env 配置、TradingAgents-CN 可导入、akshare 可用、LLM 连通、DB 可读写
+    
+    Returns:
+        {
+            'status': 'ok' | 'degraded' | 'error',
+            'modules': {
+                'env': {'status': 'ok', 'detail': '...'},
+                'trading_agents': {'status': 'ok', 'detail': '...'},
+                'akshare': {'status': 'ok', 'detail': '...'},
+                'llm': {'status': 'ok', 'detail': '...'},
+                'database': {'status': 'ok', 'detail': '...'},
+            },
+        }
+    """
+```
+
+**暴露为 API 端点**：在 `stock_radar/api.py` 末尾追加 `GET /api/health`
+
+---
+
+### Phase 5（可选）: 简单回测
+
+---
+
+#### Task 5.1: 实现简单回测
+
+**新建文件**：`core/backtest/__init__.py` 和 `core/backtest/simple.py`
+
+- 输入：日期范围、策略名称
+- 流程：模拟每 10 个交易日执行一次选股，记录 T+10 收益
+- 输出：胜率、平均收益、最大回撤、对比沪深 300
+
+---
+
+## 完成后的目录结构
+
+```
+dvexa/
+├── start.bat
+├── start.sh
+├── .env.example
+├── requirements.txt
+├── vendor/TradingAgents-CN/
+├── config/settings.py, weights.py
+├── agents/
+│   ├── analysis/factor_calc.py       # 已扩展
+│   ├── research/debate.py            # 🆕
+│   └── trading/decision.py           # 🆕
+├── strategies/
+│   ├── engine.py                     # 已适配
+│   ├── configs/*.yaml                # 已充实
+│   └── regime/detector.py            # 已增强
+├── core/
+│   ├── engine/orchestrator.py        # 🆕
+│   ├── memory/store.py               # 🆕
+│   ├── scheduler/scheduler.py        # 🆕
+│   ├── backtest/simple.py            # 🆕
+│   └── health.py                     # 🆕
+├── integrations/
+│   ├── trading_agents_wrapper.py     # 🆕
+│   └── notifier.py                   # 🆕
+├── stock_radar/api.py                # 已追加端点
+├── DENG-main/
+└── data/dvexa_memory.db
+```
+
+---
+
+## 执行规则
+
+1. **按 Phase 顺序执行，每个 Phase 内按 Task 编号顺序执行**
+2. **每个 Task 执行前，先用 read 工具读取所有相关现有文件，完整理解上下文后再动手**
+3. **每个 Task 执行后，运行 `python -c "from xxx import yyy"` 验证无 import 错误**
+4. **不修改 `stock_radar/` 现有代码** — 新 API 端点追加在文件末尾
+5. **不修改 `vendor/TradingAgents-CN/`** — 任何文件都不动
+6. **新建文件前先检查目录是否存在，不存在则创建**
+7. **每个 Phase 完成后输出进度摘要**
+8. **遇到不确定的实现细节，优先选择最简单的方案**
+9. **所有中文注释和文档用中文，代码标识符用英文**
+
+---
+
+## 开始执行
+
+请从 **Task 0.1** 开始。先读取项目根目录的 `README.md`、`requirements.txt`、`.env.example`、`config/settings.py`、`strategies/engine.py`、`strategies/regime/detector.py`、`agents/analysis/factor_calc.py`，理解现有代码后再开始改造。

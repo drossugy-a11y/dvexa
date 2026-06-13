@@ -1,20 +1,33 @@
 name: "震荡均衡策略"
 regime: shock
-description: "震荡市中选择有支撑的优质股"
+description: "区间震荡，高抛低吸，分散持仓"
 
 filters:
-  momentum_min: 5
-  trend_threshold: 0
-  roe_min: 15
+  st_exclude: true
+  min_market_cap: 3000000000
+  min_volume_20d: 30000000
+  rsi_low: 35
+  pe_score_min: 50
+  health_min: 60
+  total_score_min: 65
 
 scoring:
   weights:
-    quality: 0.30
-    valuation: 0.25
-    growth: 0.20
-    momentum: 0.15
-    trend: 0.10
+    pe_score: 0.20
+    health: 0.15
+    quality: 0.15
+    profitability: 0.15
+    growth: 0.10
+    dividend_yield: 0.10
+    rsi_score: 0.10
+    momentum_20d: 0.05
 
 output:
-  top_n: 10
-  min_score: 70
+  top_n: 20
+  min_score: 65
+  max_position_pct: 0.08
+
+analysis:
+  ta_depth: 3
+  focus: "均值回归、低吸机会、高股息防御"
+  prompt_hint: "当前处于震荡市。重点关注估值合理、有安全边际的股票。"

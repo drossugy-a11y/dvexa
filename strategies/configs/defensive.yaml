@@ -1,20 +1,32 @@
-name: "熊市防守策略"
+name: "熊市防御策略"
 regime: bear
-description: "下跌市中寻找超跌反弹或空仓观望"
+description: "防守为主，低仓位，高股息，等底部信号"
 
 filters:
-  momentum_min: -10
-  rsi_max: 30
-  pe_max: 20
+  st_exclude: true
+  min_market_cap: 10000000000
+  min_volume_20d: 100000000
+  dividend_yield_min: 3
+  debt_ratio_max: 50
+  health_min: 75
+  total_score_min: 75
 
 scoring:
   weights:
-    valuation: 0.35
-    quality: 0.30
-    health: 0.20
-    momentum: 0.10
-    trend: 0.05
+    health: 0.25
+    dividend_yield: 0.20
+    quality: 0.20
+    pe_score: 0.15
+    profitability: 0.10
+    growth: 0.05
+    momentum_20d: 0.05
 
 output:
-  top_n: 5
-  min_score: 65
+  top_n: 8
+  min_score: 75
+  max_position_pct: 0.10
+
+analysis:
+  ta_depth: 5
+  focus: "防御性、现金流、高股息、底部信号"
+  prompt_hint: "当前处于熊市环境。以防御为主，重点关注高股息、低负债的白马股。"

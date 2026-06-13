@@ -1,20 +1,32 @@
 name: "牛市进攻策略"
 regime: bull
-description: "趋势向上时，追涨强势股"
+description: "趋势向上时，追涨强势股，集中持仓"
 
 filters:
-  momentum_min: 20
-  trend_threshold: 5
-  volume_ratio_min: 1.5
+  st_exclude: true
+  min_market_cap: 5000000000
+  min_volume_20d: 50000000
+  momentum_20d_min: 10
+  ma_trend_min: 60
+  total_score_min: 70
 
 scoring:
   weights:
-    momentum: 0.35
-    trend: 0.25
-    growth: 0.20
-    valuation: 0.10
-    quality: 0.10
+    momentum_20d: 0.25
+    momentum_60d: 0.15
+    ma_trend: 0.15
+    growth: 0.15
+    profitability: 0.10
+    volume_trend: 0.10
+    pe_score: 0.05
+    quality: 0.05
 
 output:
-  top_n: 10
-  min_score: 75
+  top_n: 15
+  min_score: 70
+  max_position_pct: 0.15
+
+analysis:
+  ta_depth: 4
+  focus: "动量突破、行业龙头、趋势延续"
+  prompt_hint: "当前处于牛市环境。重点关注趋势延续性强、动量充足的股票。"
