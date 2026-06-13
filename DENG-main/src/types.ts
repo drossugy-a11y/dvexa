@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type Tab = 'market' | 'comparison' | 'logs' | 'analysis' | 'portfolio';
+export type Tab = 'market' | 'comparison' | 'logs' | 'analysis' | 'portfolio' | 'chat';
 
 export interface FactorWeights {
   '动量': number;

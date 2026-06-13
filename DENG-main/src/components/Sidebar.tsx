@@ -4,17 +4,18 @@
  */
 
 import { Tab } from '../types';
-import { 
-  BarChart3, 
-  Sliders, 
-  ScrollText, 
-  Brain, 
-  Wallet, 
-  Plus, 
-  Code, 
+import {
+  BarChart3,
+  Sliders,
+  ScrollText,
+  Brain,
+  Wallet,
+  Plus,
+  Code,
   HelpCircle,
   Menu,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -65,6 +66,12 @@ export default function Sidebar({
       nameZh: '投资组合',
       nameEn: 'Portfolio',
       icon: Wallet,
+    },
+    {
+      id: 'chat' as Tab,
+      nameZh: 'AI 助手',
+      nameEn: 'AI Chat',
+      icon: MessageSquare,
     }
   ];
 

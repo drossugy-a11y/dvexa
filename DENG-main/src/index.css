@@ -2,39 +2,48 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #050505;
-  --color-surface: #0a0a0a;
-  --color-border: #222222;
-  
-  --color-primary: #d4af37;
-  --color-primary-container: #d4af37;
-  --color-on-primary: #050505;
-  
-  --color-secondary: #ebd594;
-  --color-secondary-fixed: #d4af37;
-  
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #d4d4d4;
-  --color-text-tertiary: #666666;
-  
-  --color-error: #ff7565;
-  --color-tertiary-container: #d4af37;
-  
-  --color-surface-container-low: #0c0c0c;
-  --color-surface-container-lowest: #050505;
-  --color-surface-container-high: #161616;
-  --color-surface-container-highest: #222222;
-  --color-outline-variant: #333333;
-  --color-on-surface-variant: #d4d4d4;
-  --color-inverse-surface: #ffffff;
-  --color-on-background: #d4d4d4;
-  
+  /* White Theme */
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+
+  --color-primary: #2563eb;
+  --color-primary-container: #2563eb;
+  --color-on-primary: #ffffff;
+
+  --color-secondary: #059669;
+  --color-secondary-fixed: #2563eb;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #94a3b8;
+
+  --color-error: #dc2626;
+  --color-tertiary-container: #dc2626;
+
+  --color-surface-container-low: #f1f5f9;
+  --color-surface-container-lowest: #f8fafc;
+  --color-surface-container-high: #e2e8f0;
+  --color-surface-container-highest: #cbd5e1;
+  --color-outline-variant: #cbd5e1;
+  --color-on-surface-variant: #475569;
+  --color-inverse-surface: #0f172a;
+  --color-on-background: #475569;
+
   --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --font-size-xs: 0.875rem;
+  --font-size-sm: 1rem;
+  --font-size-base: 1.125rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 1.75rem;
+  --font-size-3xl: 2rem;
 }
 
-/* Custom elements & scrollbar utility */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -43,26 +52,26 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #222222;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #333333;
+  background: #94a3b8;
 }
 
-/* Radar Chart Backdrop styling */
+/* Radar Chart */
 .radar-chart-gradient {
-  background: conic-gradient(from 0deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.02) 50%, rgba(212, 175, 55, 0.08) 100%);
+  background: conic-gradient(from 0deg, rgba(37, 99, 235, 0.06) 0%, rgba(37, 99, 235, 0.02) 50%, rgba(37, 99, 235, 0.06) 100%);
 }
 
 .radar-chart-matrix {
-  background-image: 
-    radial-gradient(circle at center, transparent 0%, transparent 60%, rgba(34, 34, 34, 0.6) 100%),
-    repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(34, 34, 34, 0.25) 20px),
-    repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(34, 34, 34, 0.25) 20px);
+  background-image:
+    radial-gradient(circle at center, transparent 0%, transparent 60%, rgba(226, 232, 240, 0.6) 100%),
+    repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(226, 232, 240, 0.3) 20px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(226, 232, 240, 0.3) 20px);
 }
 
-/* Subtle Shimmer for AI High priority alerts */
+/* Shimmer */
 .shimmer-ai {
   position: relative;
   overflow: hidden;
@@ -72,7 +81,7 @@
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.12), transparent);
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.08), transparent);
   transform: translateX(-100%);
   animation: shimmer-effect 4s infinite;
   pointer-events: none;
@@ -82,16 +91,16 @@
   100% { transform: translateX(100%); }
 }
 
-/* Custom dynamic indicators */
+/* Text indicators */
 .ai-text-highlight {
-  color: #d4af37;
+  color: #2563eb;
   font-weight: 500;
 }
 .ai-text-risk {
-  color: #ff7565;
+  color: #dc2626;
   font-weight: 500;
 }
 .ai-text-positive {
-  color: #ebd594;
+  color: #059669;
   font-weight: 500;
 }

@@ -15,6 +15,7 @@ import ResearchLogs from './components/ResearchLogs';
 import StockDetailAnalysis from './components/StockDetailAnalysis';
 import Portfolio from './components/Portfolio';
 import NewAnalysisModal from './components/NewAnalysisModal';
+import AIChatPage from './components/AIChat';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>(() => {
@@ -330,12 +331,19 @@ export default function App() {
         )}
 
         {activeTab === 'portfolio' && (
-          <Portfolio 
+          <Portfolio
             stocks={stocks}
             positions={positions}
             cash={cash}
             onBuy={handleBuyStock}
             onSell={handleSellStock}
+          />
+        )}
+
+        {activeTab === 'chat' && (
+          <AIChatPage
+            stocks={stocks}
+            onSelectStock={handleSelectStock}
           />
         )}
       </main>

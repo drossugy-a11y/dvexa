@@ -64,7 +64,7 @@ def setup_venv(python_cmd):
 def start_backend():
     """启动后端"""
     python = os.path.join(VENV_DIR, "Scripts", "python.exe")
-    print("[3/4] 启动后端 (port 8000)...")
+    print("[3/5] 启动后端 (port 8000)...")
 
     if check_port(8000):
         print("  端口 8000 已被占用，跳过")
@@ -79,9 +79,31 @@ def start_backend():
     return proc
 
 
+def start_copilotkit():
+    """启动 CopilotKit 后端 (AI 聊天)"""
+    print("[4/5] 启动 CopilotKit AI 服务 (port 3001)...")
+
+    if check_port(3001):
+        print("  端口 3001 已被占用，跳过")
+        return None
+
+    server_file = os.path.join(FRONTEND_DIR, "server", "copilotkit.js")
+    if not os.path.exists(server_file):
+        print("  copilotkit.js 不存在，跳过")
+        return None
+
+    npm = "npm.cmd" if os.name == "nt" else "npm"
+    proc = subprocess.Popen(
+        ["node", server_file],
+        cwd=FRONTEND_DIR,
+        creationflags=subprocess.CREATE_NEW_CONSOLE
+    )
+    return proc
+
+
 def start_frontend():
     """启动前端"""
-    print("[4/4] 启动前端 (port 3000)...")
+    print("[5/5] 启动前端 (port 3000)...")
 
     if check_port(3000):
         print("  端口 3000 已被占用，跳过")
@@ -123,6 +145,9 @@ def main():
     # 启动后端
     start_backend()
 
+    # 启动 CopilotKit AI 服务
+    start_copilotkit()
+
     # 启动前端
     start_frontend()
 
@@ -139,6 +164,7 @@ def main():
     print("=" * 50)
     print("  后端: http://localhost:8000/docs")
     print("  前端: http://localhost:3000")
+    print("  AI助手: http://localhost:3001")
     print("  关闭此窗口不影响服务运行")
     print("=" * 50)
     input("按回车退出启动器...")
