@@ -25,7 +25,7 @@ class TradingAgentsWrapper:
         if os.path.exists(VENDOR_PATH):
             try:
                 sys.path.insert(0, os.path.abspath(VENDOR_PATH))
-                from tradingagents import TradingAgentsGraph
+                from tradingagents.graph import TradingAgentsGraph
                 self._ta_module = TradingAgentsGraph
                 self._available = True
                 logger.info("TradingAgents-CN 已加载")

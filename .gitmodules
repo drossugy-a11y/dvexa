@@ -1,0 +1,3 @@
+[submodule "vendor/TradingAgents-CN"]
+	path = vendor/TradingAgents-CN
+	url = https://github.com/hsliuping/TradingAgents-CN.git
