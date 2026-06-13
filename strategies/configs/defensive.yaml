@@ -1,0 +1,20 @@
+name: "熊市防守策略"
+regime: bear
+description: "下跌市中寻找超跌反弹或空仓观望"
+
+filters:
+  momentum_min: -10
+  rsi_max: 30
+  pe_max: 20
+
+scoring:
+  weights:
+    valuation: 0.35
+    quality: 0.30
+    health: 0.20
+    momentum: 0.10
+    trend: 0.05
+
+output:
+  top_n: 5
+  min_score: 65

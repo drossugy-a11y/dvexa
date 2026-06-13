@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-background: #050505;
+  --color-surface: #0a0a0a;
+  --color-border: #222222;
+  
+  --color-primary: #d4af37;
+  --color-primary-container: #d4af37;
+  --color-on-primary: #050505;
+  
+  --color-secondary: #ebd594;
+  --color-secondary-fixed: #d4af37;
+  
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #d4d4d4;
+  --color-text-tertiary: #666666;
+  
+  --color-error: #ff7565;
+  --color-tertiary-container: #d4af37;
+  
+  --color-surface-container-low: #0c0c0c;
+  --color-surface-container-lowest: #050505;
+  --color-surface-container-high: #161616;
+  --color-surface-container-highest: #222222;
+  --color-outline-variant: #333333;
+  --color-on-surface-variant: #d4d4d4;
+  --color-inverse-surface: #ffffff;
+  --color-on-background: #d4d4d4;
+  
+  --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Custom elements & scrollbar utility */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #222222;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333333;
+}
+
+/* Radar Chart Backdrop styling */
+.radar-chart-gradient {
+  background: conic-gradient(from 0deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.02) 50%, rgba(212, 175, 55, 0.08) 100%);
+}
+
+.radar-chart-matrix {
+  background-image: 
+    radial-gradient(circle at center, transparent 0%, transparent 60%, rgba(34, 34, 34, 0.6) 100%),
+    repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(34, 34, 34, 0.25) 20px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(34, 34, 34, 0.25) 20px);
+}
+
+/* Subtle Shimmer for AI High priority alerts */
+.shimmer-ai {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-ai::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.12), transparent);
+  transform: translateX(-100%);
+  animation: shimmer-effect 4s infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer-effect {
+  100% { transform: translateX(100%); }
+}
+
+/* Custom dynamic indicators */
+.ai-text-highlight {
+  color: #d4af37;
+  font-weight: 500;
+}
+.ai-text-risk {
+  color: #ff7565;
+  font-weight: 500;
+}
+.ai-text-positive {
+  color: #ebd594;
+  font-weight: 500;
+}

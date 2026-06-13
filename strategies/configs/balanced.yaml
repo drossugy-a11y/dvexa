@@ -1,0 +1,20 @@
+name: "震荡均衡策略"
+regime: shock
+description: "震荡市中选择有支撑的优质股"
+
+filters:
+  momentum_min: 5
+  trend_threshold: 0
+  roe_min: 15
+
+scoring:
+  weights:
+    quality: 0.30
+    valuation: 0.25
+    growth: 0.20
+    momentum: 0.15
+    trend: 0.10
+
+output:
+  top_n: 10
+  min_score: 70

@@ -1,0 +1,20 @@
+name: "牛市进攻策略"
+regime: bull
+description: "趋势向上时，追涨强势股"
+
+filters:
+  momentum_min: 20
+  trend_threshold: 5
+  volume_ratio_min: 1.5
+
+scoring:
+  weights:
+    momentum: 0.35
+    trend: 0.25
+    growth: 0.20
+    valuation: 0.10
+    quality: 0.10
+
+output:
+  top_n: 10
+  min_score: 75

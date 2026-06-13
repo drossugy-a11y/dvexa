@@ -1,0 +1,6 @@
+{
+  "name": "DVexa Terminal",
+  "description": "An AI-powered quantitative research and stock factor-analysis terminal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
